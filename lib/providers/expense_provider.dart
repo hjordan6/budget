@@ -10,9 +10,9 @@ class ExpenseProvider extends ChangeNotifier {
   static const String expenseBoxName = 'expenses';
   static const String budgetBoxName = 'categories';
   String? user;
-  late final List<String> _users;
+  List<String>? _users;
 
-  List<String> get users => _users;
+  List<String> get users => _users ?? [];
 
   final List<String> _boxes = [expenseBoxName, budgetBoxName];
   List<String> get boxes => _boxes;
