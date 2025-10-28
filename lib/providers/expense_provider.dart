@@ -8,14 +8,14 @@ enum AppPage { list, categories, account }
 
 class ExpenseProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   String? user;
-  
+
   List<Expense> _expenses = [];
   Map<String, BudgetCategory> _budgets = {};
-  
+
   AppPage _currentView = AppPage.categories;
-  
+
   StreamSubscription<QuerySnapshot>? _expensesSubscription;
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
@@ -29,31 +29,37 @@ class ExpenseProvider extends ChangeNotifier {
     final userRef = _firestore.collection('users').doc(user);
 
     // Listen to expenses collection
-    _expensesSubscription = userRef.collection('expenses').snapshots().listen(
-      (snapshot) {
-        _expenses = snapshot.docs.map((doc) {
-          return Expense.fromJson(doc.data(), doc.id);
-        }).toList();
-        notifyListeners();
-      },
-      onError: (error) {
-        print('Error listening to expenses: $error');
-      },
-    );
+    _expensesSubscription = userRef
+        .collection('expenses')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _expenses = snapshot.docs.map((doc) {
+              return Expense.fromJson(doc.data(), doc.id);
+            }).toList();
+            notifyListeners();
+          },
+          onError: (error) {
+            print('Error listening to expenses: $error');
+          },
+        );
 
     // Listen to categories collection
-    _categoriesSubscription = userRef.collection('categories').snapshots().listen(
-      (snapshot) {
-        _budgets = {
-          for (var doc in snapshot.docs)
-            doc.id: BudgetCategory.fromJson(doc.data())
-        };
-        notifyListeners();
-      },
-      onError: (error) {
-        print('Error listening to categories: $error');
-      },
-    );
+    _categoriesSubscription = userRef
+        .collection('categories')
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _budgets = {
+              for (var doc in snapshot.docs)
+                doc.id: BudgetCategory.fromJson(doc.data()),
+            };
+            notifyListeners();
+          },
+          onError: (error) {
+            print('Error listening to categories: $error');
+          },
+        );
   }
 
   void _stopListening() {
@@ -90,9 +96,12 @@ class ExpenseProvider extends ChangeNotifier {
       if (budget.nextUpdate.isBefore(now)) {
         budget.balance += budget.budget;
         budget.pushUpdate();
-        
+
         // Update in Firestore
-        await userRef.collection('categories').doc(budget.name).update(budget.toJson());
+        await userRef
+            .collection('categories')
+            .doc(budget.name)
+            .update(budget.toJson());
       }
     }
   }
@@ -106,14 +115,18 @@ class ExpenseProvider extends ChangeNotifier {
     final fromBudget = _budgets[from];
     if (fromBudget != null) {
       fromBudget.balance -= amount;
-      await userRef.collection('categories').doc(from).update({'balance': fromBudget.balance});
+      await userRef.collection('categories').doc(from).update({
+        'balance': fromBudget.balance,
+      });
     }
 
     // Update to budget
     final toBudget = _budgets[to];
     if (toBudget != null) {
       toBudget.balance += amount;
-      await userRef.collection('categories').doc(to).update({'balance': toBudget.balance});
+      await userRef.collection('categories').doc(to).update({
+        'balance': toBudget.balance,
+      });
     }
   }
 
@@ -130,7 +143,9 @@ class ExpenseProvider extends ChangeNotifier {
     final budget = _budgets[expense.category];
     if (budget != null) {
       budget.balance -= expense.price;
-      await userRef.collection('categories').doc(budget.name).update({'balance': budget.balance});
+      await userRef.collection('categories').doc(budget.name).update({
+        'balance': budget.balance,
+      });
     }
   }
 
@@ -139,7 +154,10 @@ class ExpenseProvider extends ChangeNotifier {
     if (user == null) return;
 
     final userRef = _firestore.collection('users').doc(user);
-    await userRef.collection('categories').doc(budget.name).set(budget.toJson());
+    await userRef
+        .collection('categories')
+        .doc(budget.name)
+        .set(budget.toJson());
   }
 
   /// Deletes an expense
@@ -148,14 +166,20 @@ class ExpenseProvider extends ChangeNotifier {
 
     final userRef = _firestore.collection('users').doc(user);
     await userRef.collection('expenses').doc(expense.id).delete();
+    await userRef.collection('categories').doc(expense.category).update({
+      'balance': FieldValue.increment(expense.price),
+    });
   }
 
   /// Updates a budget category in Firestore
-  Future<void> updateBudget(String oldName, BudgetCategory updatedBudget) async {
+  Future<void> updateBudget(
+    String oldName,
+    BudgetCategory updatedBudget,
+  ) async {
     if (user == null) return;
 
     final userRef = _firestore.collection('users').doc(user);
-    
+
     // If name changed, delete old document and create new one
     if (oldName != updatedBudget.name) {
       // Update all expenses that reference the old category name
@@ -163,17 +187,23 @@ class ExpenseProvider extends ChangeNotifier {
           .collection('expenses')
           .where('category', isEqualTo: oldName)
           .get();
-      
+
       for (var doc in expensesSnapshot.docs) {
         await doc.reference.update({'category': updatedBudget.name});
       }
-      
+
       // Delete old category and create new one
       await userRef.collection('categories').doc(oldName).delete();
-      await userRef.collection('categories').doc(updatedBudget.name).set(updatedBudget.toJson());
+      await userRef
+          .collection('categories')
+          .doc(updatedBudget.name)
+          .set(updatedBudget.toJson());
     } else {
       // Otherwise just update the existing document
-      await userRef.collection('categories').doc(oldName).update(updatedBudget.toJson());
+      await userRef
+          .collection('categories')
+          .doc(oldName)
+          .update(updatedBudget.toJson());
     }
   }
 
@@ -190,7 +220,7 @@ class ExpenseProvider extends ChangeNotifier {
 
     final userRef = _firestore.collection('users').doc(user);
     final snapshot = await userRef.collection('expenses').get();
-    
+
     for (var doc in snapshot.docs) {
       await doc.reference.delete();
     }
@@ -201,7 +231,7 @@ class ExpenseProvider extends ChangeNotifier {
 
     final userRef = _firestore.collection('users').doc(user);
     final snapshot = await userRef.collection('categories').get();
-    
+
     for (var doc in snapshot.docs) {
       await doc.reference.delete();
     }
