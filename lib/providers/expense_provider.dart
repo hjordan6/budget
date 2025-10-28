@@ -150,6 +150,33 @@ class ExpenseProvider extends ChangeNotifier {
     await userRef.collection('expenses').doc(expense.id).delete();
   }
 
+  /// Updates a budget category in Firestore
+  Future<void> updateBudget(String oldName, BudgetCategory updatedBudget) async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    
+    // If name changed, delete old document and create new one
+    if (oldName != updatedBudget.name) {
+      // Update all expenses that reference the old category name
+      final expensesSnapshot = await userRef
+          .collection('expenses')
+          .where('category', isEqualTo: oldName)
+          .get();
+      
+      for (var doc in expensesSnapshot.docs) {
+        await doc.reference.update({'category': updatedBudget.name});
+      }
+      
+      // Delete old category and create new one
+      await userRef.collection('categories').doc(oldName).delete();
+      await userRef.collection('categories').doc(updatedBudget.name).set(updatedBudget.toJson());
+    } else {
+      // Otherwise just update the existing document
+      await userRef.collection('categories').doc(oldName).update(updatedBudget.toJson());
+    }
+  }
+
   /// Deletes a budget
   Future<void> deleteBudget(BudgetCategory budget) async {
     if (user == null) return;
