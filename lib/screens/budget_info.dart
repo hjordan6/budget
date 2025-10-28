@@ -49,9 +49,32 @@ class _BudgetInfoState extends State<BudgetInfo> {
 
     // Parse values from controllers
     final newName = _nameController.text.trim();
-    final newBudgetAmount = double.tryParse(_budgetController.text.substring(1)) ?? currentBudget.budget;
-    final newBalance = double.tryParse(_balanceController.text.substring(1)) ?? currentBudget.balance;
+    
+    // Parse budget amount - remove $ and any commas
+    String budgetText = _budgetController.text.replaceAll(RegExp(r'[\$,]'), '');
+    final newBudgetAmount = double.tryParse(budgetText) ?? currentBudget.budget;
+    
+    // Parse balance - remove $ and any commas
+    String balanceText = _balanceController.text.replaceAll(RegExp(r'[\$,]'), '');
+    final newBalance = double.tryParse(balanceText) ?? currentBudget.balance;
+    
     final newInterval = _selectedInterval ?? currentBudget.interval;
+
+    // Validate name
+    if (newName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Budget name cannot be empty')),
+      );
+      return;
+    }
+
+    // Check for duplicate names (only if name changed)
+    if (newName != widget.budgetName && provider.budgets.containsKey(newName)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Budget with name "$newName" already exists')),
+      );
+      return;
+    }
 
     // Calculate new next update if interval changed
     DateTime newNextUpdate = currentBudget.nextUpdate;
