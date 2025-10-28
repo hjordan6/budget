@@ -3,19 +3,18 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'providers/expense_provider.dart';
 import 'screens/data_page.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ExpenseProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
         // Add other providers here if needed
       ],
       child: const MyApp(),
