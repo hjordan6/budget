@@ -37,6 +37,47 @@ class _CategoryFormState extends State<CategoryForm> {
     }
   }
 
+  double _calculateProratedBalance(double budget, BudgetInterval interval) {
+    DateTime now = DateTime.now();
+    DateTime nextUpdate = _calculateNextUpdate(interval);
+
+    int totalDaysInInterval;
+    int daysElapsed;
+
+    if (interval == BudgetInterval.week) {
+      totalDaysInInterval = 7;
+      daysElapsed = now
+          .difference(nextUpdate.subtract(Duration(days: 7)))
+          .inDays
+          .abs();
+    } else if (interval == BudgetInterval.month) {
+      totalDaysInInterval = DateTime(now.year, now.month + 1, 0).day;
+      daysElapsed = now.day;
+    } else if (interval == BudgetInterval.quarter) {
+      int currentQuarterStartMonth = ((now.month - 1) ~/ 3) * 3 + 1;
+      DateTime quarterStart = DateTime(now.year, currentQuarterStartMonth, 1);
+      DateTime quarterEnd = DateTime(
+        now.year,
+        currentQuarterStartMonth + 3,
+        1,
+      ).subtract(Duration(days: 1));
+      totalDaysInInterval = quarterEnd.difference(quarterStart).inDays + 1;
+      daysElapsed = now.difference(quarterStart).inDays + 1;
+    } else if (interval == BudgetInterval.year) {
+      totalDaysInInterval = DateTime(
+        now.year + 1,
+        1,
+        1,
+      ).difference(DateTime(now.year, 1, 1)).inDays;
+      daysElapsed = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
+    } else {
+      throw ArgumentError("Invalid interval: $interval");
+    }
+
+    int daysRemaining = totalDaysInInterval - daysElapsed;
+    return (budget / totalDaysInInterval) * daysRemaining;
+  }
+
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
@@ -46,7 +87,7 @@ class _CategoryFormState extends State<CategoryForm> {
         BudgetCategory(
           name: _categoryName,
           budget: _budget,
-          balance: _budget,
+          balance: _calculateProratedBalance(_budget, _interval),
           interval: _interval,
           nextUpdate: _calculateNextUpdate(_interval),
         ),
