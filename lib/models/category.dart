@@ -1,26 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hive/hive.dart';
 
-part 'category.g.dart';
-
-@HiveType(typeId: 0)
-class BudgetCategory extends HiveObject {
-  @HiveField(0)
+class BudgetCategory {
   final String name;
-
-  @HiveField(1)
   final double budget;
-
-  @HiveField(2)
   double balance;
-
-  @HiveField(3)
   BudgetInterval interval;
-
-  @HiveField(4)
   final String notes;
-
-  @HiveField(5)
   DateTime nextUpdate;
 
   void pushUpdate() {
@@ -81,14 +66,9 @@ class BudgetCategory extends HiveObject {
   }
 }
 
-@HiveType(typeId: 1) // unique typeId for the enum
 enum BudgetInterval {
-  @HiveField(0)
   week,
-  @HiveField(1)
   month,
-  @HiveField(2)
   quarter,
-  @HiveField(3)
   year,
 }

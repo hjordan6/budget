@@ -1,35 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'providers/expense_provider.dart';
 import 'screens/data_page.dart';
-import 'models/category.dart';
-import 'models/expense.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
-  await Hive.initFlutter();
-
-  // Register adapters
-  Hive.registerAdapter(BudgetCategoryAdapter());
-  Hive.registerAdapter(BudgetIntervalAdapter());
-  Hive.registerAdapter(ExpenseAdapter());
-
-  // Open Hive boxes
-  await Hive.openBox<BudgetCategory>('categories');
-  await Hive.openBox<Expense>('expenses');
+  // Initialize Firebase
+  await Firebase.initializeApp();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) {
-            ExpenseProvider p = ExpenseProvider();
-            p.init();
-            return p;
-          },
+          create: (_) => ExpenseProvider(),
         ),
         // Add other providers here if needed
       ],

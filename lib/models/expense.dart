@@ -1,28 +1,13 @@
-import 'package:hive/hive.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
-part 'expense.g.dart';
-
-@HiveType(typeId: 2)
-class Expense extends HiveObject {
-  @HiveField(0)
+class Expense {
   final String name;
-
-  @HiveField(1)
   final String category;
-
-  @HiveField(2)
   final double price;
-
-  @HiveField(3)
   final DateTime date;
-
-  @HiveField(4)
   final String notes;
-
-  @HiveField(5)
-  final String? id;
+  final String id;
 
   Expense({
     String? id,
@@ -35,6 +20,7 @@ class Expense extends HiveObject {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'name': name,
       'category': category,
       'price': price,
@@ -44,8 +30,9 @@ class Expense extends HiveObject {
   }
 
   /// Create Expense from Firestore / JSON
-  factory Expense.fromJson(Map<String, dynamic> json) {
+  factory Expense.fromJson(Map<String, dynamic> json, String docId) {
     return Expense(
+      id: json['id'] ?? docId,
       name: json['name'] as String,
       category: json['category'] as String,
       price: (json['price'] as num).toDouble(),

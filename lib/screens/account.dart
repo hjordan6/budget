@@ -32,7 +32,7 @@ class AccountPage extends StatelessWidget {
       return;
     }
 
-    provider.user = name;
+    provider.setUser(name);
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Name updated successfully')));
