@@ -115,11 +115,32 @@ class _BudgetInfoState extends State<BudgetInfo> {
     
     if (budget == null) return;
 
+    // Count expenses in this category
+    final expenseCount = provider.expenses
+        .where((e) => e.category == budget.name)
+        .length;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Budget'),
-        content: Text('Are you sure you want to delete "${budget.name}"?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete "${budget.name}"?'),
+            if (expenseCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Warning: $expenseCount expense(s) reference this budget. They will not be deleted but will become uncategorized.',
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
