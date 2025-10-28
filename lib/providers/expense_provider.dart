@@ -1,115 +1,183 @@
 import 'package:flutter/foundation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
+import 'dart:async';
 
 enum AppPage { list, categories, account }
 
 class ExpenseProvider extends ChangeNotifier {
-  static const String expenseBoxName = 'expenses';
-  static const String budgetBoxName = 'categories';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
   String? user;
-  List<String>? _users;
-
-  List<String> get users => _users ?? [];
-
-  final List<String> _boxes = [expenseBoxName, budgetBoxName];
-  List<String> get boxes => _boxes;
-
-  late Box<Expense> _expenseBox;
-  late Box<BudgetCategory> _budgetBox;
-
+  
+  List<Expense> _expenses = [];
+  Map<String, BudgetCategory> _budgets = {};
+  
   AppPage _currentView = AppPage.categories;
+  
+  StreamSubscription<QuerySnapshot>? _expensesSubscription;
+  StreamSubscription<QuerySnapshot>? _categoriesSubscription;
 
-  List<Expense> get expenses => _expenseBox.values.toList();
-  Map<String, BudgetCategory> get budgets => {
-    for (var b in _budgetBox.values) b.name: b,
-  };
+  List<Expense> get expenses => _expenses;
+  Map<String, BudgetCategory> get budgets => _budgets;
   AppPage get currentView => _currentView;
 
-  /// Initialize Hive boxes (call this before using the provider)
-  Future<void> init() async {
-    _expenseBox = Hive.box<Expense>(expenseBoxName);
-    _budgetBox = Hive.box<BudgetCategory>(budgetBoxName);
-    notifyListeners();
+  void _startListening() {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+
+    // Listen to expenses collection
+    _expensesSubscription = userRef.collection('expenses').snapshots().listen(
+      (snapshot) {
+        _expenses = snapshot.docs.map((doc) {
+          return Expense.fromJson(doc.data(), doc.id);
+        }).toList();
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error listening to expenses: $error');
+      },
+    );
+
+    // Listen to categories collection
+    _categoriesSubscription = userRef.collection('categories').snapshots().listen(
+      (snapshot) {
+        _budgets = {
+          for (var doc in snapshot.docs)
+            doc.id: BudgetCategory.fromJson(doc.data())
+        };
+        notifyListeners();
+      },
+      onError: (error) {
+        print('Error listening to categories: $error');
+      },
+    );
   }
 
-  Future<List<String>> _getUsers() async {
-    final usersCol = await FirebaseFirestore.instance.collection('users').get();
-    return usersCol.docs.map((d) => d.data().toString()).toList();
+  void _stopListening() {
+    _expensesSubscription?.cancel();
+    _categoriesSubscription?.cancel();
+    _expensesSubscription = null;
+    _categoriesSubscription = null;
+  }
+
+  void setUser(String? newUser) {
+    if (user != newUser) {
+      _stopListening();
+      user = newUser;
+      _expenses = [];
+      _budgets = {};
+      if (user != null) {
+        _startListening();
+      }
+      notifyListeners();
+    }
   }
 
   void updateBudgets() {
     _updateBudgets();
-    sync();
   }
 
-  void _updateBudgets() {
-    for (var b in _budgetBox.values) {
-      if (b.nextUpdate.isBefore(DateTime.now())) {
-        b.balance += b.budget;
-        b.pushUpdate();
-        b.save();
+  Future<void> _updateBudgets() async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    final now = DateTime.now();
+
+    for (var budget in _budgets.values) {
+      if (budget.nextUpdate.isBefore(now)) {
+        budget.balance += budget.budget;
+        budget.pushUpdate();
+        
+        // Update in Firestore
+        await userRef.collection('categories').doc(budget.name).update(budget.toJson());
       }
     }
   }
 
-  void moveMoney(String from, String? to, double amount) {
-    BudgetCategory? f = _budgetBox.get(from);
-    f?.balance -= amount;
-    f?.save();
-    BudgetCategory? t = _budgetBox.get(to);
-    t?.balance += amount;
-    t?.save();
-    notifyListeners();
+  Future<void> moveMoney(String from, String? to, double amount) async {
+    if (user == null || to == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+
+    // Update from budget
+    final fromBudget = _budgets[from];
+    if (fromBudget != null) {
+      fromBudget.balance -= amount;
+      await userRef.collection('categories').doc(from).update({'balance': fromBudget.balance});
+    }
+
+    // Update to budget
+    final toBudget = _budgets[to];
+    if (toBudget != null) {
+      toBudget.balance += amount;
+      await userRef.collection('categories').doc(to).update({'balance': toBudget.balance});
+    }
   }
 
-  /// Adds a new expense to Hive and updates the balance
-  void addExpense(Expense expense) {
-    _expenseBox.add(expense);
+  /// Adds a new expense to Firestore and updates the balance
+  Future<void> addExpense(Expense expense) async {
+    if (user == null) return;
 
-    final budget = _budgetBox.values.firstWhere(
-      (b) => b.name == expense.category,
-      orElse: () => BudgetCategory(
-        name: expense.category,
-        budget: 0,
-        balance: 0,
-        interval: BudgetInterval.month,
-        nextUpdate: DateTime.now(),
-      ),
-    );
+    final userRef = _firestore.collection('users').doc(user);
 
-    budget.balance -= expense.price;
-    budget.save();
+    // Add expense to Firestore
+    await userRef.collection('expenses').doc(expense.id).set(expense.toJson());
 
-    notifyListeners();
+    // Update budget balance
+    final budget = _budgets[expense.category];
+    if (budget != null) {
+      budget.balance -= expense.price;
+      await userRef.collection('categories').doc(budget.name).update({'balance': budget.balance});
+    }
   }
 
-  /// Adds a new budget category to Hive
-  void addBudget(BudgetCategory budget) {
-    _budgetBox.put(budget.name, budget);
-    notifyListeners();
+  /// Adds a new budget category to Firestore
+  Future<void> addBudget(BudgetCategory budget) async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef.collection('categories').doc(budget.name).set(budget.toJson());
   }
 
   /// Deletes an expense
-  void deleteExpense(Expense expense) {
-    expense.delete();
-    notifyListeners();
+  Future<void> deleteExpense(Expense expense) async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef.collection('expenses').doc(expense.id).delete();
   }
 
   /// Deletes a budget
-  void deleteBudget(BudgetCategory budget) {
-    budget.delete();
-    notifyListeners();
+  Future<void> deleteBudget(BudgetCategory budget) async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef.collection('categories').doc(budget.name).delete();
   }
 
-  void deleteAllExpenses() {
-    _expenseBox.clear();
+  Future<void> deleteAllExpenses() async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    final snapshot = await userRef.collection('expenses').get();
+    
+    for (var doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
   }
 
-  void deleteAllBudgets() {
-    _budgetBox.clear();
+  Future<void> deleteAllBudgets() async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    final snapshot = await userRef.collection('categories').get();
+    
+    for (var doc in snapshot.docs) {
+      await doc.reference.delete();
+    }
   }
 
   /// Switch between list view and summary view
@@ -122,53 +190,12 @@ class ExpenseProvider extends ChangeNotifier {
 
   /// Calculate total spent per category
   Map<String, double> get categoryTotals {
-    return {for (var b in _budgetBox.values) b.name: b.balance};
+    return {for (var b in _budgets.values) b.name: b.balance};
   }
 
-  Future<void> sync() async {
-    print("syncing");
-    final firestore = FirebaseFirestore.instance;
-
-    if (user == null) return;
-
-    final userRef = firestore.collection('users').doc(user);
-
-    // 1️⃣ --- FETCH REMOTE ---
-    final remoteCategories = await userRef.collection('categories').get();
-    final remoteExpenses = await userRef.collection('expenses').get();
-    _users = await _getUsers();
-
-    // 2️⃣ --- MERGE INTO HIVE ---
-    // Budgets: Firestore -> Hive
-    for (var doc in remoteCategories.docs) {
-      final data = doc.data();
-      final category = BudgetCategory.fromJson(data);
-      _budgetBox.put(category.name, category);
-    }
-
-    // Expenses: Firestore -> Hive
-    for (var doc in remoteExpenses.docs) {
-      final data = doc.data();
-      final expense = Expense.fromJson(data);
-      // Avoid duplicates: expense.id must be unique (e.g., Firestore doc id)
-      if (!_expenseBox.values.any((e) => e.id == expense.id)) {
-        _expenseBox.add(expense);
-      }
-    }
-
-    // 3️⃣ --- PUSH LOCAL CHANGES TO FIRESTORE ---
-    // Budgets Hive -> Firestore
-    for (var b in _budgetBox.values) {
-      await userRef.collection('categories').doc(b.name).set(b.toJson());
-    }
-
-    // Expenses Hive -> Firestore
-    for (var e in _expenseBox.values) {
-      // use e.id as docId if your model has one
-      await userRef.collection('expenses').doc(e.id).set(e.toJson());
-    }
-
-    notifyListeners();
-    print("sync finished");
+  @override
+  void dispose() {
+    _stopListening();
+    super.dispose();
   }
 }
