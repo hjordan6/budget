@@ -23,16 +23,6 @@ class ExpenseProvider extends ChangeNotifier {
   Map<String, BudgetCategory> get budgets => _budgets;
   AppPage get currentView => _currentView;
 
-  ExpenseProvider() {
-    // Start listening to data changes when provider is created
-    _initializeListeners();
-  }
-
-  void _initializeListeners() {
-    // For now, we'll only listen when a user is set
-    // This can be called when user logs in or is set
-  }
-
   void _startListening() {
     if (user == null) return;
 
