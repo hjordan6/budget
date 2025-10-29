@@ -82,11 +82,11 @@ class BudgetCategory {
       'name': name,
       'budget': budget,
       'balance': balance,
-      'interval': interval.name, // "week" | "month" | ...
+      'interval': interval.name,
       'nextUpdate': nextUpdate,
       'notes': notes,
     };
   }
 }
 
-enum BudgetInterval { week, month, quarter, year }
+enum BudgetInterval { week, month, quarter, year, savings }

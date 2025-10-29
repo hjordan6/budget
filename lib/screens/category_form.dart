@@ -15,7 +15,9 @@ class _CategoryFormState extends State<CategoryForm> {
   String _categoryName = '';
   BudgetInterval _interval = BudgetInterval.month;
   double _budget = 0.0;
+  bool _savings = false;
 
+  // Calculate the next update date based on the selected interval
   DateTime _calculateNextUpdate(BudgetInterval interval) {
     DateTime now = DateTime.now();
     if (interval == BudgetInterval.week) {
@@ -37,6 +39,7 @@ class _CategoryFormState extends State<CategoryForm> {
     }
   }
 
+  // Calculate prorated balance based on days remaining in the interval
   double _calculateProratedBalance(double budget, BudgetInterval interval) {
     DateTime now = DateTime.now();
     DateTime nextUpdate = _calculateNextUpdate(interval);
@@ -90,6 +93,7 @@ class _CategoryFormState extends State<CategoryForm> {
           balance: _calculateProratedBalance(_budget, _interval),
           interval: _interval,
           nextUpdate: _calculateNextUpdate(_interval),
+          savings: _savings,
         ),
       );
 
@@ -121,36 +125,48 @@ class _CategoryFormState extends State<CategoryForm> {
               ),
 
               // Budget Amount
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Budget Amount'),
-                keyboardType: TextInputType.number,
-                onSaved: (value) =>
-                    _budget = double.tryParse(value ?? '0') ?? 0,
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Enter a budget amount'
-                    : null,
-              ),
+              if (!_savings)
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Budget Amount'),
+                  keyboardType: TextInputType.number,
+                  onSaved: (value) =>
+                      _budget = double.tryParse(value ?? '0') ?? 0,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Enter a budget amount'
+                      : null,
+                ),
 
-              DropdownButtonFormField<String>(
-                initialValue: "Month",
-                items: [
-                  DropdownMenuItem(value: "Week", child: Text("Week")),
-                  DropdownMenuItem(value: "Month", child: Text("Month")),
-                  DropdownMenuItem(value: "Quarter", child: Text("Quarter")),
-                  DropdownMenuItem(value: "Year", child: Text("Year")),
-                ],
-                onChanged: (v) => setState(() {
-                  if (v == "Week") {
-                    _interval = BudgetInterval.week;
-                  } else if (v == "Month") {
-                    _interval = BudgetInterval.month;
-                  } else if (v == "Quarter") {
-                    _interval = BudgetInterval.quarter;
-                  } else if (v == "Year") {
-                    _interval = BudgetInterval.year;
-                  }
+              if (!_savings)
+                DropdownButtonFormField<String>(
+                  initialValue: "Month",
+                  items: [
+                    DropdownMenuItem(value: "Week", child: Text("Week")),
+                    DropdownMenuItem(value: "Month", child: Text("Month")),
+                    DropdownMenuItem(value: "Quarter", child: Text("Quarter")),
+                    DropdownMenuItem(value: "Year", child: Text("Year")),
+                  ],
+                  onChanged: (v) => setState(() {
+                    if (v == "Week") {
+                      _interval = BudgetInterval.week;
+                    } else if (v == "Month") {
+                      _interval = BudgetInterval.month;
+                    } else if (v == "Quarter") {
+                      _interval = BudgetInterval.quarter;
+                    } else if (v == "Year") {
+                      _interval = BudgetInterval.year;
+                    }
+                  }),
+                  decoration: const InputDecoration(labelText: 'Interval'),
+                ),
+
+              SwitchListTile(
+                title: const Text('Is Savings Category?'),
+                value: _savings,
+                onChanged: (val) => setState(() {
+                  _savings = val;
+                  _budget = 0.0;
+                  _interval = BudgetInterval.savings;
                 }),
-                decoration: const InputDecoration(labelText: 'Interval'),
               ),
 
               Spacer(),
