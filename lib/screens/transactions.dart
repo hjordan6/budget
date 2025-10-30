@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
+import '../utils.dart';
 
 class ExpenseListPage extends StatelessWidget {
   const ExpenseListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final expenses = context.watch<ExpenseProvider>().expenses;
+    final expenses = context.watch<ExpenseProvider>().expenses
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     if (expenses.isEmpty) return const Center(child: Text('No expenses yet.'));
 
@@ -25,12 +27,11 @@ class ExpenseListPage extends StatelessWidget {
             child: const Icon(Icons.delete, color: Colors.white),
           ),
           onDismissed: (direction) {
-            // Call the provider to remove the expense
             context.read<ExpenseProvider>().deleteExpense(e);
           },
           child: ListTile(
             title: Text(e.name),
-            subtitle: Text('${e.category} • \$${e.price.toStringAsFixed(2)}'),
+            subtitle: Text('${e.category} • ${e.price.asPrice}'),
             trailing: Text(
               '${e.date.month}/${e.date.day}/${e.date.year}',
               style: const TextStyle(fontSize: 12),
