@@ -7,6 +7,12 @@ import 'dart:async';
 enum AppPage { list, categories, account, saving }
 
 class ExpenseProvider extends ChangeNotifier {
+  ExpenseProvider() {
+    if (user != null) {
+      _currentView = AppPage.account;
+    }
+  }
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String? user;
