@@ -7,7 +7,8 @@ class ExpenseListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final expenses = context.watch<ExpenseProvider>().expenses;
+    final expenses = context.watch<ExpenseProvider>().expenses
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     if (expenses.isEmpty) return const Center(child: Text('No expenses yet.'));
 
