@@ -19,7 +19,6 @@ class _BudgetInfoState extends State<BudgetInfo> {
   final TextEditingController _moveAmountController = TextEditingController();
   String? _selectedBudget;
 
-  // Edit controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _budgetController = TextEditingController();
   final TextEditingController _balanceController = TextEditingController();
@@ -28,7 +27,6 @@ class _BudgetInfoState extends State<BudgetInfo> {
   @override
   void initState() {
     super.initState();
-    // Initialize edit controllers with current values
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<ExpenseProvider>();
       final budget = provider.budgets[widget.budgetName];
@@ -44,23 +42,22 @@ class _BudgetInfoState extends State<BudgetInfo> {
   void _saveChanges() {
     final provider = context.read<ExpenseProvider>();
     final currentBudget = provider.budgets[widget.budgetName];
-    
+
     if (currentBudget == null) return;
 
-    // Parse values from controllers
     final newName = _nameController.text.trim();
-    
-    // Parse budget amount - remove $ and any commas
+
     String budgetText = _budgetController.text.replaceAll(RegExp(r'[\$,]'), '');
     final newBudgetAmount = double.tryParse(budgetText) ?? currentBudget.budget;
-    
-    // Parse balance - remove $ and any commas
-    String balanceText = _balanceController.text.replaceAll(RegExp(r'[\$,]'), '');
+
+    String balanceText = _balanceController.text.replaceAll(
+      RegExp(r'[\$,]'),
+      '',
+    );
     final newBalance = double.tryParse(balanceText) ?? currentBudget.balance;
-    
+
     final newInterval = _selectedInterval ?? currentBudget.interval;
 
-    // Validate name
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Budget name cannot be empty')),
@@ -68,7 +65,6 @@ class _BudgetInfoState extends State<BudgetInfo> {
       return;
     }
 
-    // Check for duplicate names (only if name changed)
     if (newName != widget.budgetName && provider.budgets.containsKey(newName)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Budget with name "$newName" already exists')),
@@ -76,13 +72,11 @@ class _BudgetInfoState extends State<BudgetInfo> {
       return;
     }
 
-    // Calculate new next update if interval changed
     DateTime newNextUpdate = currentBudget.nextUpdate;
     if (newInterval != currentBudget.interval) {
       newNextUpdate = BudgetCategory.calculateNextUpdate(newInterval);
     }
 
-    // Create updated budget
     final updatedBudget = BudgetCategory(
       name: newName,
       budget: newBudgetAmount,
@@ -92,7 +86,6 @@ class _BudgetInfoState extends State<BudgetInfo> {
       notes: currentBudget.notes,
     );
 
-    // Update in provider
     provider.updateBudget(widget.budgetName, updatedBudget);
 
     setState(() {
@@ -112,7 +105,7 @@ class _BudgetInfoState extends State<BudgetInfo> {
   void _deleteBudget() {
     final provider = context.read<ExpenseProvider>();
     final budget = provider.budgets[widget.budgetName];
-    
+
     if (budget == null) return;
 
     // Count expenses in this category
@@ -133,10 +126,7 @@ class _BudgetInfoState extends State<BudgetInfo> {
               const SizedBox(height: 8),
               Text(
                 'Warning: $expenseCount expense(s) reference this budget. They will not be deleted but will become uncategorized.',
-                style: const TextStyle(
-                  color: Colors.orange,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.orange, fontSize: 12),
               ),
             ],
           ],
@@ -149,8 +139,8 @@ class _BudgetInfoState extends State<BudgetInfo> {
           TextButton(
             onPressed: () {
               provider.deleteBudget(budget);
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Go back to previous screen
+              Navigator.pop(context);
+              Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Budget "${budget.name}" deleted')),
               );
@@ -184,8 +174,10 @@ class _BudgetInfoState extends State<BudgetInfo> {
                 setState(() {
                   _editing = true;
                   _nameController.text = currentBudget.name;
-                  _budgetController.text = '\$${currentBudget.budget.toStringAsFixed(2)}';
-                  _balanceController.text = '\$${currentBudget.balance.toStringAsFixed(2)}';
+                  _budgetController.text =
+                      '\$${currentBudget.budget.toStringAsFixed(2)}';
+                  _balanceController.text =
+                      '\$${currentBudget.balance.toStringAsFixed(2)}';
                   _selectedInterval = currentBudget.interval;
                 });
               },
@@ -204,7 +196,6 @@ class _BudgetInfoState extends State<BudgetInfo> {
         child: Column(
           children: [
             if (currentBudget != null && _editing) ...[
-              // Edit mode
               const SizedBox(height: 16),
               TextField(
                 controller: _nameController,
@@ -235,7 +226,7 @@ class _BudgetInfoState extends State<BudgetInfo> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<BudgetInterval>(
-                value: _selectedInterval,
+                initialValue: _selectedInterval,
                 decoration: const InputDecoration(
                   labelText: 'Interval',
                   border: OutlineInputBorder(),
@@ -284,24 +275,26 @@ class _BudgetInfoState extends State<BudgetInfo> {
                 title: const Text("Interval"),
                 trailing: Text(currentBudget.interval.name.capitalize),
               ),
-              ListTile(
-                title: const Text("Budgeted"),
-                trailing: Text(currentBudget.budget.asPrice),
-              ),
+              if (currentBudget.interval != BudgetInterval.savings)
+                ListTile(
+                  title: const Text("Budgeted"),
+                  trailing: Text(currentBudget.budget.asPrice),
+                ),
               ListTile(
                 title: const Text("Balance"),
                 trailing: Text(currentBudget.balance.asPrice),
               ),
-              ListTile(
-                title: const Text("Next Update"),
-                trailing: Text(currentBudget.nextUpdate.formattedDate),
-              ),
+              if (currentBudget.interval != BudgetInterval.savings)
+                ListTile(
+                  title: const Text("Next Update"),
+                  trailing: Text(currentBudget.nextUpdate.formattedDate),
+                ),
               const SizedBox(height: 16),
 
               // Show TextField and Dropdown when _moving is true
               if (_moving) ...[
                 DropdownButtonFormField<String>(
-                  value: _selectedBudget,
+                  initialValue: _selectedBudget,
                   decoration: InputDecoration(
                     labelText: "Move to",
                     border: OutlineInputBorder(

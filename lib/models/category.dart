@@ -7,6 +7,7 @@ class BudgetCategory {
   BudgetInterval interval;
   final String notes;
   DateTime nextUpdate;
+  bool savings;
 
   void pushUpdate() {
     if (interval == BudgetInterval.week) {
@@ -59,6 +60,7 @@ class BudgetCategory {
     required this.balance,
     required this.interval,
     required this.nextUpdate,
+    this.savings = false,
     this.notes = '',
   });
 
@@ -80,16 +82,11 @@ class BudgetCategory {
       'name': name,
       'budget': budget,
       'balance': balance,
-      'interval': interval.name, // "week" | "month" | ...
+      'interval': interval.name,
       'nextUpdate': nextUpdate,
       'notes': notes,
     };
   }
 }
 
-enum BudgetInterval {
-  week,
-  month,
-  quarter,
-  year,
-}
+enum BudgetInterval { week, month, quarter, year, savings }

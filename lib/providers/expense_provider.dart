@@ -4,9 +4,15 @@ import '../models/expense.dart';
 import '../models/category.dart';
 import 'dart:async';
 
-enum AppPage { list, categories, account }
+enum AppPage { list, categories, account, saving }
 
 class ExpenseProvider extends ChangeNotifier {
+  ExpenseProvider() {
+    if (user != null) {
+      _currentView = AppPage.account;
+    }
+  }
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String? user;
@@ -237,7 +243,6 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  /// Switch between list view and summary view
   void toggleView(AppPage view) {
     if (_currentView != view) {
       _currentView = view;
@@ -245,7 +250,6 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  /// Calculate total spent per category
   Map<String, double> get categoryTotals {
     return {for (var b in _budgets.values) b.name: b.balance};
   }

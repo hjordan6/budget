@@ -9,25 +9,34 @@ class CategorySummaryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoryTotals = context.watch<ExpenseProvider>().categoryTotals;
+    var categories = context.watch<ExpenseProvider>().budgets.entries.toList()
+      ..sort((a, b) {
+        if (a.value.savings == b.value.savings) {
+          return a.key.compareTo(b.key);
+        } else if (a.value.savings) {
+          return 1;
+        } else {
+          return -1;
+        }
+      });
 
-    if (categoryTotals.isEmpty) {
+    if (categories.isEmpty) {
       return const Center(child: Text('No budgets created yet'));
     }
 
     return ListView(
-      children: categoryTotals.entries.map((entry) {
-        final category = entry.key;
-        final total = entry.value;
+      children: categories.map((entry) {
+        final categoryName = entry.key;
+        final category = entry.value;
         return ListTile(
           leading: const Icon(Icons.label),
-          title: Text(category),
-          trailing: Text(total.asPrice),
+          title: Text(categoryName),
+          trailing: Text(category.balance.asPrice),
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => BudgetInfo(budgetName: category),
+                builder: (_) => BudgetInfo(budgetName: categoryName),
               ),
             );
           },
