@@ -35,7 +35,7 @@ class _CategoryFormState extends State<CategoryForm> {
     } else if (interval == BudgetInterval.year) {
       return DateTime(now.year + 1, 1, 1);
     } else {
-      throw ArgumentError("Invalid period: $interval");
+      return DateTime.now();
     }
   }
 
@@ -74,7 +74,7 @@ class _CategoryFormState extends State<CategoryForm> {
       ).difference(DateTime(now.year, 1, 1)).inDays;
       daysElapsed = now.difference(DateTime(now.year, 1, 1)).inDays + 1;
     } else {
-      throw ArgumentError("Invalid interval: $interval");
+      return 0;
     }
 
     int daysRemaining = totalDaysInInterval - daysElapsed;

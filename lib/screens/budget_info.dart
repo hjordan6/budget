@@ -275,18 +275,20 @@ class _BudgetInfoState extends State<BudgetInfo> {
                 title: const Text("Interval"),
                 trailing: Text(currentBudget.interval.name.capitalize),
               ),
-              ListTile(
-                title: const Text("Budgeted"),
-                trailing: Text(currentBudget.budget.asPrice),
-              ),
+              if (currentBudget.interval != BudgetInterval.savings)
+                ListTile(
+                  title: const Text("Budgeted"),
+                  trailing: Text(currentBudget.budget.asPrice),
+                ),
               ListTile(
                 title: const Text("Balance"),
                 trailing: Text(currentBudget.balance.asPrice),
               ),
-              ListTile(
-                title: const Text("Next Update"),
-                trailing: Text(currentBudget.nextUpdate.formattedDate),
-              ),
+              if (currentBudget.interval != BudgetInterval.savings)
+                ListTile(
+                  title: const Text("Next Update"),
+                  trailing: Text(currentBudget.nextUpdate.formattedDate),
+                ),
               const SizedBox(height: 16),
 
               // Show TextField and Dropdown when _moving is true
