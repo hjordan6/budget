@@ -95,7 +95,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
               const SizedBox(height: 16),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Price'),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 onSaved: (v) => _price = double.tryParse(v ?? '0') ?? 0,
                 validator: (v) => v!.isEmpty ? 'Enter a price' : null,
               ),
