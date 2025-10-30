@@ -54,6 +54,7 @@ class ExpenseProvider extends ChangeNotifier {
     // Listen to categories collection
     _categoriesSubscription = userRef
         .collection('categories')
+        .orderBy('savings')
         .snapshots()
         .listen(
           (snapshot) {
