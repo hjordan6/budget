@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
+import '../utils.dart';
 
 class ExpenseListPage extends StatelessWidget {
   const ExpenseListPage({super.key});
@@ -26,12 +27,11 @@ class ExpenseListPage extends StatelessWidget {
             child: const Icon(Icons.delete, color: Colors.white),
           ),
           onDismissed: (direction) {
-            // Call the provider to remove the expense
             context.read<ExpenseProvider>().deleteExpense(e);
           },
           child: ListTile(
             title: Text(e.name),
-            subtitle: Text('${e.category} • \$${e.price.toStringAsFixed(2)}'),
+            subtitle: Text('${e.category} • ${e.price.asPrice}'),
             trailing: Text(
               '${e.date.month}/${e.date.day}/${e.date.year}',
               style: const TextStyle(fontSize: 12),
