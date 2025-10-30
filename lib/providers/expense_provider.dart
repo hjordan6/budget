@@ -37,6 +37,7 @@ class ExpenseProvider extends ChangeNotifier {
     // Listen to expenses collection
     _expensesSubscription = userRef
         .collection('expenses')
+        .orderBy('date', descending: true)
         .snapshots()
         .listen(
           (snapshot) {
