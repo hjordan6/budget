@@ -85,6 +85,7 @@ class BudgetCategory {
       'interval': interval.name,
       'nextUpdate': nextUpdate,
       'notes': notes,
+      'savings': savings,
     };
   }
 }
