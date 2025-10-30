@@ -39,7 +39,7 @@ class ExpenseProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading user from preferences: $e');
+      debugPrint('Error loading user from preferences: $e');
     }
   }
 
@@ -53,7 +53,7 @@ class ExpenseProvider extends ChangeNotifier {
         await prefs.remove('user');
       }
     } catch (e) {
-      print('Error saving user to preferences: $e');
+      debugPrint('Error saving user to preferences: $e');
     }
   }
 
