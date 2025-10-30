@@ -74,6 +74,7 @@ class BudgetCategory {
       ),
       nextUpdate: (json['nextUpdate'] as Timestamp).toDate(),
       notes: json['notes'] ?? '',
+      savings: json['savings'] ?? false,
     );
   }
 
