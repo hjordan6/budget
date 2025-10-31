@@ -28,6 +28,10 @@ class ExpenseProvider extends ChangeNotifier {
   Map<String, BudgetCategory> get budgets => _budgets;
   AppPage get currentView => _currentView;
 
+  void loadUser() {
+    _loadUser();
+  }
+
   // Load user from shared preferences
   Future<void> _loadUser() async {
     try {

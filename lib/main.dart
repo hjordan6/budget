@@ -11,10 +11,13 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  ExpenseProvider provider = ExpenseProvider();
+  provider.loadUser();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ChangeNotifierProvider(create: (_) => provider),
         // Add other providers here if needed
       ],
       child: const MyApp(),
