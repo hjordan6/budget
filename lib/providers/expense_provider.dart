@@ -8,9 +8,7 @@ import 'dart:async';
 enum AppPage { list, categories, account, saving }
 
 class ExpenseProvider extends ChangeNotifier {
-  ExpenseProvider() {
-    _loadUser();
-  }
+  ExpenseProvider() {}
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -27,39 +25,6 @@ class ExpenseProvider extends ChangeNotifier {
   List<Expense> get expenses => _expenses;
   Map<String, BudgetCategory> get budgets => _budgets;
   AppPage get currentView => _currentView;
-
-  void loadUser() {
-    _loadUser();
-  }
-
-  // Load user from shared preferences
-  Future<void> _loadUser() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUser = prefs.getString('user');
-      if (savedUser != null && savedUser.isNotEmpty) {
-        user = savedUser;
-        _startListening();
-        notifyListeners();
-      }
-    } catch (e) {
-      debugPrint('Error loading user from preferences: $e');
-    }
-  }
-
-  // Save user to shared preferences
-  Future<void> _saveUser(String? userName) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (userName != null && userName.isNotEmpty) {
-        await prefs.setString('user', userName);
-      } else {
-        await prefs.remove('user');
-      }
-    } catch (e) {
-      debugPrint('Error saving user to preferences: $e');
-    }
-  }
 
   void _startListening() {
     if (user == null) return;
@@ -113,7 +78,6 @@ class ExpenseProvider extends ChangeNotifier {
     if (user != newUser) {
       _stopListening();
       user = newUser;
-      _saveUser(newUser); // Save to shared preferences
       _expenses = [];
       _budgets = {};
       if (user != null) {

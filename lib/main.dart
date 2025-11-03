@@ -12,8 +12,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   ExpenseProvider provider = ExpenseProvider();
-  provider.loadUser();
-
   runApp(
     MultiProvider(
       providers: [
