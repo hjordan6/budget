@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,7 +12,13 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   ExpenseProvider provider = ExpenseProvider();
-  provider.loadUser();
+
+  final auth = FirebaseAuth.instance;
+
+  // If not signed in, sign in anonymously before launching the app
+  if (auth.currentUser == null) {
+    await auth.signInAnonymously();
+  }
 
   runApp(
     MultiProvider(
