@@ -8,7 +8,6 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   ExpenseProvider provider = ExpenseProvider();
@@ -16,10 +15,7 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => provider),
-        // Add other providers here if needed
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => provider)],
       child: const MyApp(),
     ),
   );
