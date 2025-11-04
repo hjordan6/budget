@@ -193,8 +193,9 @@ class _BudgetInfoState extends State<BudgetInfo> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
             if (currentBudget != null && _editing) ...[
               const SizedBox(height: 16),
               TextField(
@@ -368,6 +369,7 @@ class _BudgetInfoState extends State<BudgetInfo> {
               ),
             ],
           ],
+        ),
         ),
       ),
     );
