@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,18 +9,20 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   ExpenseProvider provider = ExpenseProvider();
-  provider.loadUser();
+
+  final auth = FirebaseAuth.instance;
+
+  // If not signed in, sign in anonymously before launching the app
+  if (auth.currentUser == null) {
+    await auth.signInAnonymously();
+  }
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => provider),
-        // Add other providers here if needed
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => provider)],
       child: const MyApp(),
     ),
   );
