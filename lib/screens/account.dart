@@ -1,11 +1,10 @@
 import 'package:budget/providers/expense_provider.dart';
+import 'package:budget/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class AccountPage extends StatelessWidget {
-  AccountPage({super.key});
-
-  final TextEditingController _nameController = TextEditingController();
+  const AccountPage({super.key});
 
   void _clearAllData(BuildContext context, ExpenseProvider provider) {
     try {
@@ -23,52 +22,51 @@ class AccountPage extends StatelessWidget {
     }
   }
 
-  void _updateUserName(BuildContext context, ExpenseProvider provider) {
-    final name = _nameController.text.trim();
-    if (name.isEmpty) {
+  void _logout(BuildContext context, AuthProvider authProvider) async {
+    await authProvider.signOut();
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid name')),
+        const SnackBar(content: Text('Logged out successfully')),
       );
-      return;
     }
-
-    provider.setUser(name);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Name updated successfully')));
   }
 
   @override
   Widget build(BuildContext context) {
     ExpenseProvider provider = context.watch<ExpenseProvider>();
+    AuthProvider authProvider = context.watch<AuthProvider>();
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: provider.user != null
-              ? Text("Logged in user: ${provider.user}")
-              : Text("No user logged in"),
-        ),
-        // --- USER NAME INPUT FIELD ---
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: "Enter your name",
-              border: OutlineInputBorder(),
-            ),
+          child: Column(
+            children: [
+              const Text(
+                "Account Information",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Email: ${authProvider.user?.email ?? 'Not available'}",
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "User ID: ${authProvider.userId ?? 'Not available'}",
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // --- SAVE BUTTON ---
+        // --- LOGOUT BUTTON ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: ElevatedButton(
-            onPressed: () => _updateUserName(context, provider),
-            child: const Text("Save Name"),
+            onPressed: () => _logout(context, authProvider),
+            child: const Text("Logout"),
           ),
         ),
         const SizedBox(height: 32),

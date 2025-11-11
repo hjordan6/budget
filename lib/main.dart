@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'providers/expense_provider.dart';
+import 'providers/auth_provider.dart';
 import 'screens/data_page.dart';
+import 'screens/login_page.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -11,14 +13,11 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  ExpenseProvider provider = ExpenseProvider();
-  provider.loadUser();
-
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => provider),
-        // Add other providers here if needed
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const MyApp(),
     ),
@@ -61,11 +60,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void updateBudgets() {
-    ExpenseProvider provider = Provider.of<ExpenseProvider>(
-      context,
-      listen: false,
-    );
-    provider.updateBudgets();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.isAuthenticated) {
+      ExpenseProvider provider = Provider.of<ExpenseProvider>(
+        context,
+        listen: false,
+      );
+      provider.updateBudgets();
+    }
   }
 
   @override
@@ -73,7 +75,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'Expense Tracker',
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
-      home: const DataPage(),
+      home: Consumer<AuthProvider>(
+        builder: (context, authProvider, _) {
+          // Update expense provider with current user ID
+          if (authProvider.isAuthenticated) {
+            final expenseProvider = Provider.of<ExpenseProvider>(
+              context,
+              listen: false,
+            );
+            if (expenseProvider.user != authProvider.userId) {
+              expenseProvider.setUser(authProvider.userId);
+            }
+            return const DataPage();
+          } else {
+            return const LoginPage();
+          }
+        },
+      ),
     );
   }
 }

@@ -28,7 +28,7 @@ class DataPage extends StatelessWidget {
     final pageMap = {
       AppPage.list: const ExpenseListPage(),
       AppPage.categories: const CategorySummaryPage(),
-      AppPage.account: AccountPage(),
+      AppPage.account: const AccountPage(),
     };
 
     return Scaffold(
