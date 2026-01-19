@@ -206,10 +206,28 @@ class ExpenseProvider extends ChangeNotifier {
     if (user == null) return;
 
     final userRef = _firestore.collection('users').doc(user);
-    await userRef.collection('expenses').doc(expense.id).delete();
-    await userRef.collection('categories').doc(expense.category).update({
-      'balance': FieldValue.increment(expense.price),
-    });
+
+    try {
+      // Save to recentlyDeleted BEFORE deleting
+      print("backing up expense ${expense.id} to recentlyDeleted");
+      await userRef.collection('recentlyDeleted').doc(expense.id).set({
+        ...expense.toJson(),
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Now delete the expense
+      await userRef.collection('expenses').doc(expense.id).delete();
+
+      // Update category balance
+      await userRef.collection('categories').doc(expense.category).update({
+        'balance': FieldValue.increment(expense.price),
+      });
+
+      print("deleted expense ${expense.id}");
+    } catch (e) {
+      print("Error deleting expense: $e");
+      rethrow;
+    }
   }
 
   /// Updates a budget category in Firestore
