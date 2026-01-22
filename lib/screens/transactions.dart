@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
+import 'expense_form.dart';
 import '../utils.dart';
 
 class ExpenseListPage extends StatelessWidget {
@@ -11,12 +12,32 @@ class ExpenseListPage extends StatelessWidget {
     final expenses = context.watch<ExpenseProvider>().expenses
       ..sort((a, b) => b.date.compareTo(a.date));
 
-    if (expenses.isEmpty) return const Center(child: Text('No expenses yet.'));
-
+    // Use a header item for the centered Add Expense button
     return ListView.builder(
-      itemCount: expenses.length,
+      itemCount: expenses.length + 1,
       itemBuilder: (context, index) {
-        final e = expenses[index];
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Center(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.attach_money),
+                label: const Text('Add Expense'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(140, 44),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ExpenseForm()),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+
+        final e = expenses[index - 1];
         return Dismissible(
           key: Key(e.id),
           direction: DismissDirection.endToStart,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
 import 'budget_info.dart';
+import 'category_form.dart';
+import 'expense_form.dart';
 import '../utils.dart';
 
 class CategorySummaryPage extends StatelessWidget {
@@ -11,10 +13,6 @@ class CategorySummaryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var categories = context.watch<ExpenseProvider>().budgets.entries.toList();
-
-    if (categories.isEmpty) {
-      return const Center(child: Text('No budgets created yet'));
-    }
 
     // Returns a list tile for the given budget category
     getListTile(MapEntry<String, BudgetCategory> c) {
@@ -47,11 +45,67 @@ class CategorySummaryPage extends StatelessWidget {
 
     // prepare list of list tiles, with divider between the budgets and savings
     List<Widget> listTiles = [];
+
+    // Add Budget + Add Expense buttons at the top (centered, sized)
+    listTiles.add(
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('Add Budget'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(140, 44),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CategoryForm()),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.attach_money),
+                label: const Text('Add Expense'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(140, 44),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ExpenseForm()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // If there are no categories, show a message below the button
+    if (budgetCategories.isEmpty && savingsCategories.isEmpty) {
+      listTiles.add(
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24.0),
+            child: Text('No budgets created yet'),
+          ),
+        ),
+      );
+      return ListView(children: listTiles);
+    }
+
     listTiles.addAll(budgetCategories.map(getListTile).toList());
     if (savingsCategories.isNotEmpty) {
       listTiles.addAll([Center(child: Text("Savings Categories"))]);
       listTiles.addAll(savingsCategories.map(getListTile).toList());
     }
+
     return ListView(children: listTiles);
   }
 }
