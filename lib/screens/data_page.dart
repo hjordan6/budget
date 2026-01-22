@@ -2,8 +2,6 @@ import 'package:budget/screens/account.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
-import 'expense_form.dart';
-import 'category_form.dart';
 import 'transactions.dart';
 import 'budgets.dart';
 
@@ -76,22 +74,6 @@ class DataPage extends StatelessWidget {
         ),
       ),
       body: pageMap[currentPage] ?? const Center(child: Text('Page not found')),
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: () {
-      //     if (currentPage == AppPage.list) {
-      //       Navigator.push(
-      //         context,
-      //         MaterialPageRoute(builder: (_) => const ExpenseForm()),
-      //       );
-      //     } else if (currentPage == AppPage.categories) {
-      //       Navigator.push(
-      //         context,
-      //         MaterialPageRoute(builder: (_) => const CategoryForm()),
-      //       );
-      //     }
-      //   },
-      //   child: const Icon(Icons.add),
-      // ),
     );
   }
 }
