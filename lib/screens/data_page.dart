@@ -76,22 +76,22 @@ class DataPage extends StatelessWidget {
         ),
       ),
       body: pageMap[currentPage] ?? const Center(child: Text('Page not found')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (currentPage == AppPage.list) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ExpenseForm()),
-            );
-          } else if (currentPage == AppPage.categories) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CategoryForm()),
-            );
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     if (currentPage == AppPage.list) {
+      //       Navigator.push(
+      //         context,
+      //         MaterialPageRoute(builder: (_) => const ExpenseForm()),
+      //       );
+      //     } else if (currentPage == AppPage.categories) {
+      //       Navigator.push(
+      //         context,
+      //         MaterialPageRoute(builder: (_) => const CategoryForm()),
+      //       );
+      //     }
+      //   },
+      //   child: const Icon(Icons.add),
+      // ),
     );
   }
 }
