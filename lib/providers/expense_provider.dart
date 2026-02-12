@@ -81,6 +81,10 @@ class ExpenseProvider extends ChangeNotifier {
           },
           onError: (error) {
             print('Error listening to expenses: $error');
+            Logger.error(
+              "Error listening to expenses",
+              data: {"user": user, "error": error.toString()},
+            );
           },
         );
 
@@ -99,6 +103,10 @@ class ExpenseProvider extends ChangeNotifier {
           },
           onError: (error) {
             print('Error listening to categories: $error');
+            Logger.error(
+              "Error listening to categories",
+              data: {"user": user, "error": error.toString()},
+            );
           },
         );
   }
@@ -262,6 +270,18 @@ class ExpenseProvider extends ChangeNotifier {
       print("deleted expense ${expense.id}");
     } catch (e) {
       print("Error deleting expense: $e");
+      Logger.error(
+        "Error deleting expense",
+        data: {
+          "user": user,
+          "id": expense.id,
+          "name": expense.name,
+          "price": expense.price,
+          "category": expense.category,
+          "date": expense.date.toIso8601String(),
+          "error": e.toString(),
+        },
+      );
       rethrow;
     }
   }
@@ -275,36 +295,70 @@ class ExpenseProvider extends ChangeNotifier {
 
     final userRef = _firestore.collection('users').doc(user);
 
-    // If name changed, delete old document and create new one
-    if (oldName != updatedBudget.name) {
-      // Update all expenses that reference the old category name
-      final expensesSnapshot = await userRef
-          .collection('expenses')
-          .where('category', isEqualTo: oldName)
-          .get();
+    Logger.info(
+      "Updating budget",
+      data: {
+        "user": user,
+        "oldName": oldName,
+        "updatedName": updatedBudget.name,
+        "updatedBudget": updatedBudget.toJson(),
+      },
+    );
 
-      for (var doc in expensesSnapshot.docs) {
-        await doc.reference.update({'category': updatedBudget.name});
+    try {
+      // If name changed, delete old document and create new one
+      if (oldName != updatedBudget.name) {
+        // Update all expenses that reference the old category name
+        final expensesSnapshot = await userRef
+            .collection('expenses')
+            .where('category', isEqualTo: oldName)
+            .get();
+
+        for (var doc in expensesSnapshot.docs) {
+          await doc.reference.update({'category': updatedBudget.name});
+        }
+
+        // Delete old category and create new one
+        await userRef.collection('categories').doc(oldName).delete();
+        await userRef
+            .collection('categories')
+            .doc(updatedBudget.name)
+            .set(updatedBudget.toJson());
+      } else {
+        // Otherwise just update the existing document
+        await userRef
+            .collection('categories')
+            .doc(oldName)
+            .update(updatedBudget.toJson());
       }
-
-      // Delete old category and create new one
-      await userRef.collection('categories').doc(oldName).delete();
-      await userRef
-          .collection('categories')
-          .doc(updatedBudget.name)
-          .set(updatedBudget.toJson());
-    } else {
-      // Otherwise just update the existing document
-      await userRef
-          .collection('categories')
-          .doc(oldName)
-          .update(updatedBudget.toJson());
+    } catch (e) {
+      Logger.error(
+        "Error updating budget",
+        data: {
+          "user": user,
+          "oldName": oldName,
+          "updatedName": updatedBudget.name,
+          "updatedBudget": updatedBudget.toJson(),
+          "error": e.toString(),
+        },
+      );
+      rethrow;
     }
   }
 
   /// Deletes a budget
   Future<void> deleteBudget(BudgetCategory budget) async {
     if (user == null) return;
+
+    Logger.info(
+      "Deleting budget",
+      data: {
+        "user": user,
+        "budget": budget.name,
+        "balance": budget.balance,
+        "budgetedAmount": budget.budget,
+      },
+    );
 
     final userRef = _firestore.collection('users').doc(user);
     await userRef.collection('categories').doc(budget.name).delete();
