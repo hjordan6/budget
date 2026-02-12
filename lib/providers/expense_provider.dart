@@ -1,3 +1,4 @@
+import 'package:budget/log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,6 +136,15 @@ class ExpenseProvider extends ChangeNotifier {
 
     for (var budget in _budgets.values) {
       if (budget.nextUpdate.isBefore(now)) {
+        Logger.info(
+          "Updating budget",
+          data: {
+            "user": user,
+            "budget": budget.name,
+            "oldBalance": budget.balance,
+            "newBalance": budget.balance + budget.budget,
+          },
+        );
         budget.balance += budget.budget;
         budget.pushUpdate();
 
@@ -149,6 +159,11 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> moveMoney(String from, String? to, double amount) async {
     if (user == null || to == null) return;
+
+    Logger.info(
+      "Moving money",
+      data: {"from": from, "to": to, "amount": amount, "user": user},
+    );
 
     final userRef = _firestore.collection('users').doc(user);
 
@@ -173,6 +188,17 @@ class ExpenseProvider extends ChangeNotifier {
 
   /// Adds a new expense to Firestore and updates the balance
   Future<void> addExpense(Expense expense) async {
+    Logger.info(
+      "Adding expense",
+      data: {
+        "user": user,
+        "id": expense.id,
+        "name": expense.name,
+        "price": expense.price,
+        "category": expense.category,
+        "date": expense.date.toIso8601String(),
+      },
+    );
     if (user == null) return;
 
     final userRef = _firestore.collection('users').doc(user);
@@ -209,7 +235,17 @@ class ExpenseProvider extends ChangeNotifier {
 
     try {
       // Save to recentlyDeleted BEFORE deleting
-      print("backing up expense ${expense.id} to recentlyDeleted");
+      Logger.info(
+        "Backing up expense to recentlyDeleted",
+        data: {
+          "user": user,
+          "id": expense.id,
+          "name": expense.name,
+          "price": expense.price,
+          "category": expense.category,
+          "date": expense.date.toIso8601String(),
+        },
+      );
       await userRef.collection('recentlyDeleted').doc(expense.id).set({
         ...expense.toJson(),
         'deletedAt': FieldValue.serverTimestamp(),
