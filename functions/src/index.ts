@@ -30,3 +30,4 @@ setGlobalOptions({ maxInstances: 10 });
 // });
 
 export { logClient } from "./log";
+export { updateBalances } from "./updateBalances";

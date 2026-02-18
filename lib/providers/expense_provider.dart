@@ -143,7 +143,7 @@ class ExpenseProvider extends ChangeNotifier {
     final now = DateTime.now();
 
     for (var budget in _budgets.values) {
-      if (budget.nextUpdate.isBefore(now)) {
+      if (budget.nextUpdate.isBefore(now) && budget.savings == false) {
         Logger.info(
           "Updating budget",
           data: {
@@ -227,6 +227,16 @@ class ExpenseProvider extends ChangeNotifier {
   /// Adds a new budget category to Firestore
   Future<void> addBudget(BudgetCategory budget) async {
     if (user == null) return;
+
+    Logger.info(
+      "Adding budget",
+      data: {
+        "user": user,
+        "budget": budget.name,
+        "balance": budget.balance,
+        "budgetedAmount": budget.budget,
+      },
+    );
 
     final userRef = _firestore.collection('users').doc(user);
     await userRef
