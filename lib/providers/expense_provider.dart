@@ -7,7 +7,7 @@ import '../models/category.dart';
 import '../models/nutrition.dart';
 import 'dart:async';
 
-enum AppPage { list, categories, account, saving, nutrition }
+enum AppPage { list, categories, account, saving, nutrition, nutritionHistory }
 
 class ExpenseProvider extends ChangeNotifier {
   ExpenseProvider() {

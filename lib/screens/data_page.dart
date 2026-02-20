@@ -5,6 +5,7 @@ import '../providers/expense_provider.dart';
 import 'transactions.dart';
 import 'budgets.dart';
 import 'nutrition.dart';
+import 'nutrition_history.dart';
 
 class DataPage extends StatelessWidget {
   const DataPage({super.key});
@@ -16,6 +17,8 @@ class DataPage extends StatelessWidget {
       return AppBar(title: Text("Budget Categories"));
     } else if (page == AppPage.nutrition) {
       return AppBar(title: Text("Nutrition Tracker"));
+    } else if (page == AppPage.nutritionHistory) {
+      return AppBar(title: Text("Nutrition History"));
     } else {
       return AppBar(title: Text("Account Info"));
     }
@@ -31,6 +34,7 @@ class DataPage extends StatelessWidget {
       AppPage.categories: const CategorySummaryPage(),
       AppPage.account: AccountPage(),
       AppPage.nutrition: const NutritionTrackerPage(),
+      AppPage.nutritionHistory: const NutritionHistoryPage(),
     };
 
     return Scaffold(
@@ -71,6 +75,15 @@ class DataPage extends StatelessWidget {
               selected: currentPage == AppPage.nutrition,
               onTap: () {
                 provider.toggleView(AppPage.nutrition);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Nutrition History'),
+              selected: currentPage == AppPage.nutritionHistory,
+              onTap: () {
+                provider.toggleView(AppPage.nutritionHistory);
                 Navigator.pop(context);
               },
             ),
