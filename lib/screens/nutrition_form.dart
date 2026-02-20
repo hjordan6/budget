@@ -1,0 +1,213 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../models/nutrition.dart';
+import '../providers/expense_provider.dart';
+
+class NutritionForm extends StatefulWidget {
+  const NutritionForm({super.key});
+
+  @override
+  State<NutritionForm> createState() => _NutritionFormState();
+}
+
+class _NutritionFormState extends State<NutritionForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _caloriesController = TextEditingController();
+  final _carbsController = TextEditingController();
+  final _fatsController = TextEditingController();
+  final _proteinController = TextEditingController();
+
+  String _mealName = '';
+  DateTime _date = DateTime.now();
+  final _dateFormatter = DateFormat('yyyy-MM-dd HH:mm');
+
+  @override
+  void dispose() {
+    _caloriesController.dispose();
+    _carbsController.dispose();
+    _fatsController.dispose();
+    _proteinController.dispose();
+    super.dispose();
+  }
+
+  void _pickDate() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate != null) {
+      final pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_date),
+      );
+      setState(() {
+        _date = DateTime(
+          pickedDate.year,
+          pickedDate.month,
+          pickedDate.day,
+          pickedTime?.hour ?? _date.hour,
+          pickedTime?.minute ?? _date.minute,
+        );
+      });
+    }
+  }
+
+  void _autoFill(NutritionEntry entry) {
+    _caloriesController.text = entry.calories.toString();
+    _carbsController.text = entry.carbs.toString();
+    _fatsController.text = entry.fats.toString();
+    _proteinController.text = entry.protein.toString();
+  }
+
+  void _submitForm() {
+    if (_formKey.currentState!.validate()) {
+      final newEntry = NutritionEntry(
+        mealName: _mealName.trim(),
+        calories: double.tryParse(_caloriesController.text) ?? 0,
+        carbs: double.tryParse(_carbsController.text) ?? 0,
+        fats: double.tryParse(_fatsController.text) ?? 0,
+        protein: double.tryParse(_proteinController.text) ?? 0,
+        date: _date,
+      );
+
+      context.read<ExpenseProvider>().addNutritionEntry(newEntry);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allEntries = context.watch<ExpenseProvider>().nutrition;
+
+    // Build a map of unique meal names → most recent entry for autofill
+    final Map<String, NutritionEntry> mealMap = {};
+    for (final entry in allEntries.reversed) {
+      mealMap[entry.mealName.toLowerCase()] = entry;
+    }
+    final mealOptions = mealMap.values.toList();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Log Meal')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              Autocomplete<NutritionEntry>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.isEmpty) return const [];
+                  return mealOptions.where(
+                    (e) => e.mealName.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    ),
+                  );
+                },
+                displayStringForOption: (e) => e.mealName,
+                onSelected: (NutritionEntry selected) {
+                  setState(() => _mealName = selected.mealName);
+                  _autoFill(selected);
+                },
+                fieldViewBuilder: (
+                  context,
+                  controller,
+                  focusNode,
+                  onFieldSubmitted,
+                ) {
+                  return TextFormField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(labelText: 'Meal Name'),
+                    onChanged: (value) => setState(() => _mealName = value),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter a meal name'
+                        : null,
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _caloriesController,
+                decoration: const InputDecoration(
+                  labelText: 'Calories',
+                  suffixText: 'kcal',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter calories'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _carbsController,
+                decoration: const InputDecoration(
+                  labelText: 'Carbs',
+                  suffixText: 'g',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter carbs'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fatsController,
+                decoration: const InputDecoration(
+                  labelText: 'Fats',
+                  suffixText: 'g',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter fats'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _proteinController,
+                decoration: const InputDecoration(
+                  labelText: 'Protein',
+                  suffixText: 'g',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter protein'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _pickDate,
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Date & Time'),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_dateFormatter.format(_date)),
+                      const Icon(Icons.calendar_today),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _submitForm,
+                child: const Text('Save Meal'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

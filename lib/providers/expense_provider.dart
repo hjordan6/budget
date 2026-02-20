@@ -4,9 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
+import '../models/nutrition.dart';
 import 'dart:async';
 
-enum AppPage { list, categories, account, saving }
+enum AppPage { list, categories, account, saving, nutrition }
 
 class ExpenseProvider extends ChangeNotifier {
   ExpenseProvider() {
@@ -19,14 +20,17 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> _expenses = [];
   Map<String, BudgetCategory> _budgets = {};
+  List<NutritionEntry> _nutrition = [];
 
   AppPage _currentView = AppPage.categories;
 
   StreamSubscription<QuerySnapshot>? _expensesSubscription;
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
+  StreamSubscription<QuerySnapshot>? _nutritionSubscription;
 
   List<Expense> get expenses => _expenses;
   Map<String, BudgetCategory> get budgets => _budgets;
+  List<NutritionEntry> get nutrition => _nutrition;
   AppPage get currentView => _currentView;
 
   void loadUser() {
@@ -109,13 +113,36 @@ class ExpenseProvider extends ChangeNotifier {
             );
           },
         );
+
+    // Listen to nutrition collection
+    _nutritionSubscription = userRef
+        .collection('nutrition')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _nutrition = snapshot.docs.map((doc) {
+              return NutritionEntry.fromJson(doc.data(), doc.id);
+            }).toList();
+            notifyListeners();
+          },
+          onError: (error) {
+            print('Error listening to nutrition: $error');
+            Logger.error(
+              "Error listening to nutrition",
+              data: {"user": user, "error": error.toString()},
+            );
+          },
+        );
   }
 
   void _stopListening() {
     _expensesSubscription?.cancel();
     _categoriesSubscription?.cancel();
+    _nutritionSubscription?.cancel();
     _expensesSubscription = null;
     _categoriesSubscription = null;
+    _nutritionSubscription = null;
   }
 
   void setUser(String? newUser) {
@@ -125,6 +152,7 @@ class ExpenseProvider extends ChangeNotifier {
       _saveUser(newUser); // Save to shared preferences
       _expenses = [];
       _budgets = {};
+      _nutrition = [];
       if (user != null) {
         _startListening();
       }
@@ -394,6 +422,20 @@ class ExpenseProvider extends ChangeNotifier {
     for (var doc in snapshot.docs) {
       await doc.reference.delete();
     }
+  }
+
+  /// Adds a new nutrition entry to Firestore
+  Future<void> addNutritionEntry(NutritionEntry entry) async {
+    if (user == null) return;
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef.collection('nutrition').doc(entry.id).set(entry.toJson());
+  }
+
+  /// Deletes a nutrition entry from Firestore
+  Future<void> deleteNutritionEntry(NutritionEntry entry) async {
+    if (user == null) return;
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef.collection('nutrition').doc(entry.id).delete();
   }
 
   void toggleView(AppPage view) {
