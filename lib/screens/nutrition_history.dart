@@ -31,12 +31,22 @@ class NutritionHistoryPage extends StatelessWidget {
     };
   }
 
+  // Counts how many distinct days in [days] have calories > 0.
+  int _activeDayCount(List<DateTime> days, List<NutritionEntry> entries) {
+    return days
+        .where((d) => _totals(entries.where((e) => _dateOnly(e.date) == d))['calories']! > 0)
+        .length;
+  }
+
   @override
   Widget build(BuildContext context) {
     final entries = context.watch<ExpenseProvider>().nutrition;
     final today = _dateOnly(DateTime.now());
 
-    // Rolling 7-day averages
+    // Last 7 individual days, most recent first (today = index 0)
+    final last7Days = List.generate(7, (i) => today.subtract(Duration(days: i)));
+
+    // Rolling 7-day averages – divide only by days that have calories > 0
     final sevenDaysAgo = today.subtract(const Duration(days: 6));
     final rolling7 = _totals(
       entries.where((e) {
@@ -44,10 +54,10 @@ class NutritionHistoryPage extends StatelessWidget {
         return !d.isBefore(sevenDaysAgo) && !d.isAfter(today);
       }),
     );
-    final rolling7Avg = rolling7.map((k, v) => MapEntry(k, v / 7));
-
-    // Last 7 individual days, most recent first (today = index 0)
-    final last7Days = List.generate(7, (i) => today.subtract(Duration(days: i)));
+    final activeDays7 = _activeDayCount(last7Days, entries);
+    final rolling7Avg = activeDays7 == 0
+        ? {'calories': 0.0, 'carbs': 0.0, 'fats': 0.0, 'protein': 0.0}
+        : rolling7.map((k, v) => MapEntry(k, v / activeDays7));
 
     // Last 20 calendar weeks (Sunday–Saturday), most recent first
     final currentWeekStart = _weekStart(today);
@@ -69,10 +79,12 @@ class NutritionHistoryPage extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _SectionHeader(title: 'Last 7 Days'),
+        // Only show days that have at least some calories logged
         ...last7Days.map((day) {
           final dayTotals = _totals(
             entries.where((e) => _dateOnly(e.date) == day),
           );
+          if (dayTotals['calories']! == 0) return const SizedBox.shrink();
           return _NutritionSummaryCard(
             title: DateFormat('EEE, MMM d').format(day),
             calories: dayTotals['calories']!,
@@ -83,15 +95,21 @@ class NutritionHistoryPage extends StatelessWidget {
         }),
         const SizedBox(height: 16),
         _SectionHeader(title: 'Last 20 Weeks (Daily Avg, Sun–Sat)'),
+        // Only show weeks that have at least some calories logged;
+        // divide by the number of days in the week that have calories > 0
         ...last20Weeks.map((weekStart) {
           final weekEnd = weekStart.add(const Duration(days: 6));
-          final weekTotals = _totals(
-            entries.where((e) {
-              final d = _dateOnly(e.date);
-              return !d.isBefore(weekStart) && !d.isAfter(weekEnd);
-            }),
+          final weekEntries = entries.where((e) {
+            final d = _dateOnly(e.date);
+            return !d.isBefore(weekStart) && !d.isAfter(weekEnd);
+          }).toList();
+          final weekTotals = _totals(weekEntries);
+          if (weekTotals['calories']! == 0) return const SizedBox.shrink();
+          final weekDays = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+          final activeWeekDays = _activeDayCount(weekDays, weekEntries);
+          final weekAvg = weekTotals.map(
+            (k, v) => MapEntry(k, activeWeekDays == 0 ? 0.0 : v / activeWeekDays),
           );
-          final weekAvg = weekTotals.map((k, v) => MapEntry(k, v / 7));
           final label =
               '${DateFormat('MMM d').format(weekStart)} – ${DateFormat('MMM d').format(weekEnd)}';
           return _NutritionSummaryCard(
