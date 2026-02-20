@@ -10,9 +10,7 @@ class AppLogger {
     try {
       final res = await http
           .post(
-            Uri.parse(
-              "https://us-central1-budget-21dbe.cloudfunctions.net/logClient",
-            ),
+            Uri.parse("https://logclient-2thkgabx7a-uc.a.run.app"),
             headers: {"Content-Type": "application/json"},
             body: jsonEncode({
               "level": level,
