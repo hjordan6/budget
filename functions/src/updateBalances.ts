@@ -39,7 +39,7 @@ export const updateBalances = onSchedule({ schedule: "0 2 * * *", timeZone: "Ame
     for (const userDoc of users.docs) {
         const userName = String(userDoc.get("name") ?? userDoc.id);
         if (!userName.toLowerCase().includes("test")) {
-            logger.info(`Skipping user ${userName} (${userDoc.id}) as it does not appear to be a test user.`);
+            logger.info(`Skipping user ${userName} (${userDoc.id}), not a test user`);
             continue;
         }
 
