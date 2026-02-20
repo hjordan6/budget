@@ -6,6 +6,8 @@ if (!admin.apps.length) {
     admin.initializeApp();
 }
 
+logger.info(`Using project: ${admin.app().options.projectId}`);
+
 function getNextUpdateDate(interval: 'year' | 'quarter' | 'month' | 'week'): Date {
     const now = new Date();
     const nextUpdate = new Date(now);
