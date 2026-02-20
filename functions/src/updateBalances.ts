@@ -36,8 +36,11 @@ export const updateBalances = onSchedule({ schedule: "0 2 * * *", timeZone: "Ame
 
     const users = await firedb.collection("users").get();
 
+    logger.info(`Found ${users.size} users`);
+
     for (const userDoc of users.docs) {
         const userName = String(userDoc.get("name") ?? userDoc.id);
+        logger.info(`Processing user ${userName} (${userDoc.id})`);
         if (!userName.toLowerCase().includes("test")) {
             logger.info(`Skipping user ${userName} (${userDoc.id}), not a test user`);
             continue;
