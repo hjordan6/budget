@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import '../providers/expense_provider.dart';
 import 'nutrition_form.dart';
 
@@ -21,13 +23,16 @@ class NutritionTrackerPage extends StatelessWidget {
           e.date.day == today.day,
     );
 
-    final totalCalories =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.calories);
-    final totalCarbs =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.carbs);
+    final totalCalories = todayEntries.fold<double>(
+      0,
+      (sum, e) => sum + e.calories,
+    );
+    final totalCarbs = todayEntries.fold<double>(0, (sum, e) => sum + e.carbs);
     final totalFats = todayEntries.fold<double>(0, (sum, e) => sum + e.fats);
-    final totalProtein =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.protein);
+    final totalProtein = todayEntries.fold<double>(
+      0,
+      (sum, e) => sum + e.protein,
+    );
 
     final children = <Widget>[
       // Today's summary card
@@ -70,14 +75,26 @@ class NutritionTrackerPage extends StatelessWidget {
       ),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: ElevatedButton.icon(
-          icon: const Icon(Icons.add),
-          label: const Text('Log Meal'),
-          style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const NutritionForm()),
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Log Meal'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NutritionForm()),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Log Meal with AI'),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
+              onPressed: () => _showAIMealSheet(context),
+            ),
+          ],
         ),
       ),
     ];
@@ -135,6 +152,117 @@ class NutritionTrackerPage extends StatelessWidget {
   }
 }
 
+void _showAIMealSheet(BuildContext context) {
+  final controller = TextEditingController();
+  bool isLoading = false;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          Future<void> submit() async {
+            final query = controller.text.trim();
+            if (query.isEmpty) return;
+            setSheetState(() => isLoading = true);
+            try {
+              final model = FirebaseAI.googleAI().generativeModel(
+                model: 'gemini-2.5-flash',
+              );
+              final prompt =
+                  'You are a nutrition assistant. Given a meal description, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
+                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0}\n'
+                  'All numeric values must be numbers (not strings). Meal: $query';
+              final response = await model.generateContent([
+                Content.text(prompt),
+              ]);
+              final text = response.text ?? '';
+              final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
+              if (jsonMatch == null) {
+                throw FormatException('No JSON in response');
+              }
+              final data =
+                  jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => NutritionForm(
+                      initialMealName: data['mealName'] as String?,
+                      initialCalories: (data['calories'] as num?)?.toDouble(),
+                      initialCarbs: (data['carbs'] as num?)?.toDouble(),
+                      initialFats: (data['fats'] as num?)?.toDouble(),
+                      initialProtein: (data['protein'] as num?)?.toDouble(),
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              setSheetState(() => isLoading = false);
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'AI error: could not parse meal. Try again or log manually.',
+                    ),
+                  ),
+                );
+                print(e);
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NutritionForm()),
+                );
+              }
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 24,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Describe your meal',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. chicken sandwich with fries and a coke',
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (_) => submit(),
+                  textInputAction: TextInputAction.done,
+                ),
+                const SizedBox(height: 16),
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : FilledButton.icon(
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Generate with AI'),
+                        onPressed: submit,
+                      ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 class _SummaryChip extends StatelessWidget {
   const _SummaryChip({required this.label, required this.value});
 
@@ -151,4 +279,3 @@ class _SummaryChip extends StatelessWidget {
     );
   }
 }
-
