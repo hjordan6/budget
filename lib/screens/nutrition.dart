@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:budget/log.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:image_picker/image_picker.dart';
+import '../log.dart';
 import '../providers/expense_provider.dart';
 import 'nutrition_form.dart';
 
@@ -36,6 +36,7 @@ class NutritionTrackerPage extends StatelessWidget {
       0,
       (sum, e) => sum + e.protein,
     );
+    final totalFiber = todayEntries.fold<double>(0, (sum, e) => sum + e.fiber);
 
     final children = <Widget>[
       // Today's summary card
@@ -69,6 +70,10 @@ class NutritionTrackerPage extends StatelessWidget {
                   _SummaryChip(
                     label: 'Protein',
                     value: '${totalProtein.toStringAsFixed(1)}g',
+                  ),
+                  _SummaryChip(
+                    label: 'Fiber',
+                    value: '${totalFiber.toStringAsFixed(1)}g',
                   ),
                 ],
               ),
@@ -140,7 +145,8 @@ class NutritionTrackerPage extends StatelessWidget {
                   Text(
                     'C:${entry.carbs.toStringAsFixed(1)}g  '
                     'F:${entry.fats.toStringAsFixed(1)}g  '
-                    'P:${entry.protein.toStringAsFixed(1)}g',
+                    'P:${entry.protein.toStringAsFixed(1)}g  '
+                    'Fiber:${entry.fiber.toStringAsFixed(1)}g',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -170,10 +176,7 @@ void _showAIMealSheet(BuildContext context) {
           Future<void> pickImage(ImageSource source) async {
             try {
               final picker = ImagePicker();
-              final image = await picker.pickImage(
-                source: source,
-                imageQuality: 85,
-              );
+              final image = await picker.pickImage(source: source, imageQuality: 85);
               if (image != null) {
                 final bytes = await image.readAsBytes();
                 setSheetState(() {
@@ -182,11 +185,9 @@ void _showAIMealSheet(BuildContext context) {
                 });
               }
             } catch (e) {
-              Logger.error('Image pick error: $e');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Failed to pick image. Please try again.'),
-                ),
+              Logger.error(
+                'Error picking image',
+                data: {'source': source.toString(), 'error': e.toString()},
               );
             }
           }
@@ -201,7 +202,7 @@ void _showAIMealSheet(BuildContext context) {
               );
               const prompt =
                   'You are a nutrition assistant. Given a meal description and/or image, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
-                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0}\n'
+                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0, "fiber": 0}\n'
                   'All numeric values must be numbers (not strings).';
 
               final List<Part> parts = [];
@@ -209,9 +210,9 @@ void _showAIMealSheet(BuildContext context) {
                 final mimeType = pickedImage!.mimeType ?? 'image/jpeg';
                 parts.add(InlineDataPart(mimeType, pickedImageBytes!));
               }
-              parts.add(
-                TextPart(query.isNotEmpty ? '$prompt Meal: $query' : prompt),
-              );
+              parts.add(TextPart(
+                query.isNotEmpty ? '$prompt Meal: $query' : prompt,
+              ));
 
               final response = await model.generateContent([
                 Content.multi(parts),
@@ -235,6 +236,7 @@ void _showAIMealSheet(BuildContext context) {
                       initialCarbs: (data['carbs'] as num?)?.toDouble(),
                       initialFats: (data['fats'] as num?)?.toDouble(),
                       initialProtein: (data['protein'] as num?)?.toDouble(),
+                      initialFiber: (data['fiber'] as num?)?.toDouble(),
                     ),
                   ),
                 );

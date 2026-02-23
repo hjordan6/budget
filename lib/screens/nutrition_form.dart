@@ -12,6 +12,7 @@ class NutritionForm extends StatefulWidget {
     this.initialCarbs,
     this.initialFats,
     this.initialProtein,
+    this.initialFiber,
   });
 
   final String? initialMealName;
@@ -19,6 +20,7 @@ class NutritionForm extends StatefulWidget {
   final double? initialCarbs;
   final double? initialFats;
   final double? initialProtein;
+  final double? initialFiber;
 
   @override
   State<NutritionForm> createState() => _NutritionFormState();
@@ -30,6 +32,7 @@ class _NutritionFormState extends State<NutritionForm> {
   final _carbsController = TextEditingController();
   final _fatsController = TextEditingController();
   final _proteinController = TextEditingController();
+  final _fiberController = TextEditingController();
   String _mealName = '';
   DateTime _date = DateTime.now();
   final _dateFormatter = DateFormat('yyyy-MM-dd HH:mm');
@@ -42,13 +45,16 @@ class _NutritionFormState extends State<NutritionForm> {
     if (widget.initialCarbs != null) _carbsController.text = widget.initialCarbs!.toString();
     if (widget.initialFats != null) _fatsController.text = widget.initialFats!.toString();
     if (widget.initialProtein != null) _proteinController.text = widget.initialProtein!.toString();
+    if (widget.initialFiber != null) _fiberController.text = widget.initialFiber!.toString();
   }
 
+  @override
   void dispose() {
     _caloriesController.dispose();
     _carbsController.dispose();
     _fatsController.dispose();
     _proteinController.dispose();
+    _fiberController.dispose();
     super.dispose();
   }
 
@@ -81,6 +87,7 @@ class _NutritionFormState extends State<NutritionForm> {
     _carbsController.text = entry.carbs.toString();
     _fatsController.text = entry.fats.toString();
     _proteinController.text = entry.protein.toString();
+    _fiberController.text = entry.fiber.toString();
   }
 
   void _submitForm() {
@@ -91,6 +98,7 @@ class _NutritionFormState extends State<NutritionForm> {
         carbs: double.tryParse(_carbsController.text) ?? 0,
         fats: double.tryParse(_fatsController.text) ?? 0,
         protein: double.tryParse(_proteinController.text) ?? 0,
+        fiber: double.tryParse(_fiberController.text) ?? 0,
         date: _date,
       );
 
@@ -203,6 +211,20 @@ class _NutritionFormState extends State<NutritionForm> {
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Enter protein' : null,
+              ),
+              const SizedBox(height: 16),
+              // Enter Fiber
+              TextFormField(
+                controller: _fiberController,
+                decoration: const InputDecoration(
+                  labelText: 'Fiber',
+                  suffixText: 'g',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter fiber' : null,
               ),
               const SizedBox(height: 16),
               // Select Date & Time

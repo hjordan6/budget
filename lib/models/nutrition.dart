@@ -8,6 +8,7 @@ class NutritionEntry {
   final double carbs;
   final double fats;
   final double protein;
+  final double fiber;
   final DateTime date;
 
   NutritionEntry({
@@ -17,6 +18,7 @@ class NutritionEntry {
     required this.carbs,
     required this.fats,
     required this.protein,
+    this.fiber = 0,
     required this.date,
   }) : id = id ?? const Uuid().v4();
 
@@ -28,6 +30,7 @@ class NutritionEntry {
       'carbs': carbs,
       'fats': fats,
       'protein': protein,
+      'fiber': fiber,
       'date': date,
     };
   }
@@ -40,6 +43,7 @@ class NutritionEntry {
       carbs: (json['carbs'] as num).toDouble(),
       fats: (json['fats'] as num).toDouble(),
       protein: (json['protein'] as num).toDouble(),
+      fiber: (json['fiber'] as num? ?? 0).toDouble(),
       date: (json['date'] as Timestamp).toDate(),
     );
   }
