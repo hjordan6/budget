@@ -23,13 +23,16 @@ class NutritionTrackerPage extends StatelessWidget {
           e.date.day == today.day,
     );
 
-    final totalCalories =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.calories);
-    final totalCarbs =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.carbs);
+    final totalCalories = todayEntries.fold<double>(
+      0,
+      (sum, e) => sum + e.calories,
+    );
+    final totalCarbs = todayEntries.fold<double>(0, (sum, e) => sum + e.carbs);
     final totalFats = todayEntries.fold<double>(0, (sum, e) => sum + e.fats);
-    final totalProtein =
-        todayEntries.fold<double>(0, (sum, e) => sum + e.protein);
+    final totalProtein = todayEntries.fold<double>(
+      0,
+      (sum, e) => sum + e.protein,
+    );
 
     final children = <Widget>[
       // Today's summary card
@@ -85,10 +88,10 @@ class NutritionTrackerPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
+            ElevatedButton.icon(
               icon: const Icon(Icons.auto_awesome),
               label: const Text('Log Meal with AI'),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(140, 44)),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
               onPressed: () => _showAIMealSheet(context),
             ),
           ],
@@ -171,11 +174,15 @@ void _showAIMealSheet(BuildContext context) {
                   'You are a nutrition assistant. Given a meal description, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
                   '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0}\n'
                   'All numeric values must be numbers (not strings). Meal: $query';
-              final response = await model.generateContent([Content.text(prompt)]);
+              final response = await model.generateContent([
+                Content.text(prompt),
+              ]);
               final text = response.text ?? '';
               final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
-              if (jsonMatch == null) throw FormatException('No JSON in response');
-              final data = jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+              if (jsonMatch == null)
+                throw FormatException('No JSON in response');
+              final data =
+                  jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
 
               if (ctx.mounted) {
                 Navigator.pop(ctx);
@@ -196,8 +203,13 @@ void _showAIMealSheet(BuildContext context) {
               setSheetState(() => isLoading = false);
               if (ctx.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('AI error: could not parse meal. Try again or log manually.')),
+                  const SnackBar(
+                    content: Text(
+                      'AI error: could not parse meal. Try again or log manually.',
+                    ),
+                  ),
                 );
+                print(e);
                 Navigator.pop(ctx);
                 Navigator.push(
                   context,
@@ -266,4 +278,3 @@ class _SummaryChip extends StatelessWidget {
     );
   }
 }
-
