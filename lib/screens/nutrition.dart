@@ -179,8 +179,9 @@ void _showAIMealSheet(BuildContext context) {
               ]);
               final text = response.text ?? '';
               final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
-              if (jsonMatch == null)
+              if (jsonMatch == null) {
                 throw FormatException('No JSON in response');
+              }
               final data =
                   jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
 
