@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:image_picker/image_picker.dart';
+import '../log.dart';
 import '../providers/expense_provider.dart';
 import 'nutrition_form.dart';
 
@@ -173,14 +174,21 @@ void _showAIMealSheet(BuildContext context) {
       return StatefulBuilder(
         builder: (ctx, setSheetState) {
           Future<void> pickImage(ImageSource source) async {
-            final picker = ImagePicker();
-            final image = await picker.pickImage(source: source, imageQuality: 85);
-            if (image != null) {
-              final bytes = await image.readAsBytes();
-              setSheetState(() {
-                pickedImage = image;
-                pickedImageBytes = bytes;
-              });
+            try {
+              final picker = ImagePicker();
+              final image = await picker.pickImage(source: source, imageQuality: 85);
+              if (image != null) {
+                final bytes = await image.readAsBytes();
+                setSheetState(() {
+                  pickedImage = image;
+                  pickedImageBytes = bytes;
+                });
+              }
+            } catch (e) {
+              Logger.error(
+                'Error picking image',
+                data: {'source': source.toString(), 'error': e.toString()},
+              );
             }
           }
 
