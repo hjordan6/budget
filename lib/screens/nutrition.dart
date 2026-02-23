@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:budget/log.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -167,14 +168,26 @@ void _showAIMealSheet(BuildContext context) {
       return StatefulBuilder(
         builder: (ctx, setSheetState) {
           Future<void> pickImage(ImageSource source) async {
-            final picker = ImagePicker();
-            final image = await picker.pickImage(source: source, imageQuality: 85);
-            if (image != null) {
-              final bytes = await image.readAsBytes();
-              setSheetState(() {
-                pickedImage = image;
-                pickedImageBytes = bytes;
-              });
+            try {
+              final picker = ImagePicker();
+              final image = await picker.pickImage(
+                source: source,
+                imageQuality: 85,
+              );
+              if (image != null) {
+                final bytes = await image.readAsBytes();
+                setSheetState(() {
+                  pickedImage = image;
+                  pickedImageBytes = bytes;
+                });
+              }
+            } catch (e) {
+              Logger.error('Image pick error: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to pick image. Please try again.'),
+                ),
+              );
             }
           }
 
@@ -196,9 +209,9 @@ void _showAIMealSheet(BuildContext context) {
                 final mimeType = pickedImage!.mimeType ?? 'image/jpeg';
                 parts.add(InlineDataPart(mimeType, pickedImageBytes!));
               }
-              parts.add(TextPart(
-                query.isNotEmpty ? '$prompt Meal: $query' : prompt,
-              ));
+              parts.add(
+                TextPart(query.isNotEmpty ? '$prompt Meal: $query' : prompt),
+              );
 
               final response = await model.generateContent([
                 Content.multi(parts),
