@@ -72,28 +72,6 @@ class AccountPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 32),
-
-        // --- ERASE ALL DATA BUTTON ---
-        SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-              ),
-              onPressed: () => _showConfirmationDialog(context, provider),
-              child: const Text(
-                'Erase All Data',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
