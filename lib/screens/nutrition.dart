@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/expense_provider.dart';
 import 'nutrition_form.dart';
 
@@ -155,6 +157,8 @@ class NutritionTrackerPage extends StatelessWidget {
 void _showAIMealSheet(BuildContext context) {
   final controller = TextEditingController();
   bool isLoading = false;
+  XFile? pickedImage;
+  Uint8List? pickedImageBytes;
 
   showModalBottomSheet(
     context: context,
@@ -162,20 +166,42 @@ void _showAIMealSheet(BuildContext context) {
     builder: (sheetContext) {
       return StatefulBuilder(
         builder: (ctx, setSheetState) {
+          Future<void> pickImage(ImageSource source) async {
+            final picker = ImagePicker();
+            final image = await picker.pickImage(source: source, imageQuality: 85);
+            if (image != null) {
+              final bytes = await image.readAsBytes();
+              setSheetState(() {
+                pickedImage = image;
+                pickedImageBytes = bytes;
+              });
+            }
+          }
+
           Future<void> submit() async {
             final query = controller.text.trim();
-            if (query.isEmpty) return;
+            if (query.isEmpty && pickedImage == null) return;
             setSheetState(() => isLoading = true);
             try {
               final model = FirebaseAI.googleAI().generativeModel(
                 model: 'gemini-2.5-flash',
               );
-              final prompt =
-                  'You are a nutrition assistant. Given a meal description, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
+              const prompt =
+                  'You are a nutrition assistant. Given a meal description and/or image, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
                   '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0}\n'
-                  'All numeric values must be numbers (not strings). Meal: $query';
+                  'All numeric values must be numbers (not strings).';
+
+              final List<Part> parts = [];
+              if (pickedImage != null && pickedImageBytes != null) {
+                final mimeType = pickedImage!.mimeType ?? 'image/jpeg';
+                parts.add(InlineDataPart(mimeType, pickedImageBytes!));
+              }
+              parts.add(TextPart(
+                query.isNotEmpty ? '$prompt Meal: $query' : prompt,
+              ));
+
               final response = await model.generateContent([
-                Content.text(prompt),
+                Content.multi(parts),
               ]);
               final text = response.text ?? '';
               final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
@@ -238,7 +264,6 @@ void _showAIMealSheet(BuildContext context) {
                 const SizedBox(height: 12),
                 TextField(
                   controller: controller,
-                  autofocus: true,
                   decoration: const InputDecoration(
                     hintText: 'e.g. chicken sandwich with fries and a coke',
                     border: OutlineInputBorder(),
@@ -246,6 +271,52 @@ void _showAIMealSheet(BuildContext context) {
                   onSubmitted: (_) => submit(),
                   textInputAction: TextInputAction.done,
                 ),
+                const SizedBox(height: 12),
+                if (pickedImage != null)
+                  Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          pickedImageBytes!,
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black54,
+                        ),
+                        onPressed: () => setSheetState(() {
+                          pickedImage = null;
+                          pickedImageBytes = null;
+                        }),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Gallery'),
+                          onPressed: () => pickImage(ImageSource.gallery),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Camera'),
+                          onPressed: () => pickImage(ImageSource.camera),
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 16),
                 isLoading
                     ? const Center(child: CircularProgressIndicator())
