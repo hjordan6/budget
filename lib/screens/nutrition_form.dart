@@ -5,7 +5,20 @@ import '../models/nutrition.dart';
 import '../providers/expense_provider.dart';
 
 class NutritionForm extends StatefulWidget {
-  const NutritionForm({super.key});
+  const NutritionForm({
+    super.key,
+    this.initialMealName,
+    this.initialCalories,
+    this.initialCarbs,
+    this.initialFats,
+    this.initialProtein,
+  });
+
+  final String? initialMealName;
+  final double? initialCalories;
+  final double? initialCarbs;
+  final double? initialFats;
+  final double? initialProtein;
 
   @override
   State<NutritionForm> createState() => _NutritionFormState();
@@ -17,12 +30,20 @@ class _NutritionFormState extends State<NutritionForm> {
   final _carbsController = TextEditingController();
   final _fatsController = TextEditingController();
   final _proteinController = TextEditingController();
-
   String _mealName = '';
   DateTime _date = DateTime.now();
   final _dateFormatter = DateFormat('yyyy-MM-dd HH:mm');
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialMealName != null) _mealName = widget.initialMealName!;
+    if (widget.initialCalories != null) _caloriesController.text = widget.initialCalories!.toString();
+    if (widget.initialCarbs != null) _carbsController.text = widget.initialCarbs!.toString();
+    if (widget.initialFats != null) _fatsController.text = widget.initialFats!.toString();
+    if (widget.initialProtein != null) _proteinController.text = widget.initialProtein!.toString();
+  }
+
   void dispose() {
     _caloriesController.dispose();
     _carbsController.dispose();
@@ -78,6 +99,7 @@ class _NutritionFormState extends State<NutritionForm> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final allEntries = context.watch<ExpenseProvider>().nutrition;
@@ -111,24 +133,23 @@ class _NutritionFormState extends State<NutritionForm> {
                   setState(() => _mealName = selected.mealName);
                   _autoFill(selected);
                 },
-                fieldViewBuilder: (
-                  context,
-                  controller,
-                  focusNode,
-                  onFieldSubmitted,
-                ) {
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(labelText: 'Meal Name'),
-                    onChanged: (value) => setState(() => _mealName = value),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter a meal name'
-                        : null,
-                  );
-                },
+                fieldViewBuilder:
+                    (context, controller, focusNode, onFieldSubmitted) {
+                      return TextFormField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          labelText: 'Meal Name',
+                        ),
+                        onChanged: (value) => setState(() => _mealName = value),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter a meal name'
+                            : null,
+                      );
+                    },
               ),
               const SizedBox(height: 16),
+              // Enter Calories
               TextFormField(
                 controller: _caloriesController,
                 decoration: const InputDecoration(
@@ -138,11 +159,11 @@ class _NutritionFormState extends State<NutritionForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter calories'
-                    : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter calories' : null,
               ),
               const SizedBox(height: 16),
+              // Enter Carbs
               TextFormField(
                 controller: _carbsController,
                 decoration: const InputDecoration(
@@ -152,11 +173,11 @@ class _NutritionFormState extends State<NutritionForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter carbs'
-                    : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter carbs' : null,
               ),
               const SizedBox(height: 16),
+              // Enter Fats
               TextFormField(
                 controller: _fatsController,
                 decoration: const InputDecoration(
@@ -166,11 +187,11 @@ class _NutritionFormState extends State<NutritionForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter fats'
-                    : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter fats' : null,
               ),
               const SizedBox(height: 16),
+              // Enter Protein
               TextFormField(
                 controller: _proteinController,
                 decoration: const InputDecoration(
@@ -180,11 +201,11 @@ class _NutritionFormState extends State<NutritionForm> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter protein'
-                    : null,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter protein' : null,
               ),
               const SizedBox(height: 16),
+              // Select Date & Time
               InkWell(
                 onTap: _pickDate,
                 child: InputDecorator(
@@ -199,10 +220,12 @@ class _NutritionFormState extends State<NutritionForm> {
                 ),
               ),
               const SizedBox(height: 24),
+              // Save Meal Button
               ElevatedButton(
                 onPressed: _submitForm,
                 child: const Text('Save Meal'),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -210,4 +233,3 @@ class _NutritionFormState extends State<NutritionForm> {
     );
   }
 }
-
