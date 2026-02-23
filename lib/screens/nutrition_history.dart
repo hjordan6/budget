@@ -16,18 +16,20 @@ class NutritionHistoryPage extends StatelessWidget {
   }
 
   Map<String, double> _totals(Iterable<NutritionEntry> entries) {
-    double calories = 0, carbs = 0, fats = 0, protein = 0;
+    double calories = 0, carbs = 0, fats = 0, protein = 0, fiber = 0;
     for (final e in entries) {
       calories += e.calories;
       carbs += e.carbs;
       fats += e.fats;
       protein += e.protein;
+      fiber += e.fiber;
     }
     return {
       'calories': calories,
       'carbs': carbs,
       'fats': fats,
       'protein': protein,
+      'fiber': fiber,
     };
   }
 
@@ -56,7 +58,7 @@ class NutritionHistoryPage extends StatelessWidget {
     );
     final activeDays7 = _activeDayCount(last7Days, entries);
     final rolling7Avg = activeDays7 == 0
-        ? {'calories': 0.0, 'carbs': 0.0, 'fats': 0.0, 'protein': 0.0}
+        ? {'calories': 0.0, 'carbs': 0.0, 'fats': 0.0, 'protein': 0.0, 'fiber': 0.0}
         : rolling7.map((k, v) => MapEntry(k, v / activeDays7));
 
     // Last 20 calendar weeks (Sunday–Saturday), most recent first
@@ -76,6 +78,7 @@ class NutritionHistoryPage extends StatelessWidget {
           carbs: rolling7Avg['carbs']!,
           fats: rolling7Avg['fats']!,
           protein: rolling7Avg['protein']!,
+          fiber: rolling7Avg['fiber']!,
         ),
         const SizedBox(height: 16),
         _SectionHeader(title: 'Last 7 Days'),
@@ -91,6 +94,7 @@ class NutritionHistoryPage extends StatelessWidget {
             carbs: dayTotals['carbs']!,
             fats: dayTotals['fats']!,
             protein: dayTotals['protein']!,
+            fiber: dayTotals['fiber']!,
           );
         }),
         const SizedBox(height: 16),
@@ -118,6 +122,7 @@ class NutritionHistoryPage extends StatelessWidget {
             carbs: weekAvg['carbs']!,
             fats: weekAvg['fats']!,
             protein: weekAvg['protein']!,
+            fiber: weekAvg['fiber']!,
           );
         }),
       ],
@@ -146,6 +151,7 @@ class _NutritionSummaryCard extends StatelessWidget {
     required this.carbs,
     required this.fats,
     required this.protein,
+    required this.fiber,
   });
 
   final String title;
@@ -153,6 +159,7 @@ class _NutritionSummaryCard extends StatelessWidget {
   final double carbs;
   final double fats;
   final double protein;
+  final double fiber;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +179,7 @@ class _NutritionSummaryCard extends StatelessWidget {
                 _Chip(label: 'Carbs', value: '${carbs.toStringAsFixed(1)}g'),
                 _Chip(label: 'Fats', value: '${fats.toStringAsFixed(1)}g'),
                 _Chip(label: 'Protein', value: '${protein.toStringAsFixed(1)}g'),
+                _Chip(label: 'Fiber', value: '${fiber.toStringAsFixed(1)}g'),
               ],
             ),
           ],

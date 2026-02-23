@@ -28,6 +28,8 @@ class NutritionTrackerPage extends StatelessWidget {
     final totalFats = todayEntries.fold<double>(0, (sum, e) => sum + e.fats);
     final totalProtein =
         todayEntries.fold<double>(0, (sum, e) => sum + e.protein);
+    final totalFiber =
+        todayEntries.fold<double>(0, (sum, e) => sum + e.fiber);
 
     final children = <Widget>[
       // Today's summary card
@@ -61,6 +63,10 @@ class NutritionTrackerPage extends StatelessWidget {
                   _SummaryChip(
                     label: 'Protein',
                     value: '${totalProtein.toStringAsFixed(1)}g',
+                  ),
+                  _SummaryChip(
+                    label: 'Fiber',
+                    value: '${totalFiber.toStringAsFixed(1)}g',
                   ),
                 ],
               ),
@@ -120,7 +126,8 @@ class NutritionTrackerPage extends StatelessWidget {
                   Text(
                     'C:${entry.carbs.toStringAsFixed(1)}g  '
                     'F:${entry.fats.toStringAsFixed(1)}g  '
-                    'P:${entry.protein.toStringAsFixed(1)}g',
+                    'P:${entry.protein.toStringAsFixed(1)}g  '
+                    'Fiber:${entry.fiber.toStringAsFixed(1)}g',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],

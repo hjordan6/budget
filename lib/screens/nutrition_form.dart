@@ -17,6 +17,7 @@ class _NutritionFormState extends State<NutritionForm> {
   final _carbsController = TextEditingController();
   final _fatsController = TextEditingController();
   final _proteinController = TextEditingController();
+  final _fiberController = TextEditingController();
 
   String _mealName = '';
   DateTime _date = DateTime.now();
@@ -28,6 +29,7 @@ class _NutritionFormState extends State<NutritionForm> {
     _carbsController.dispose();
     _fatsController.dispose();
     _proteinController.dispose();
+    _fiberController.dispose();
     super.dispose();
   }
 
@@ -60,6 +62,7 @@ class _NutritionFormState extends State<NutritionForm> {
     _carbsController.text = entry.carbs.toString();
     _fatsController.text = entry.fats.toString();
     _proteinController.text = entry.protein.toString();
+    _fiberController.text = entry.fiber.toString();
   }
 
   void _submitForm() {
@@ -70,6 +73,7 @@ class _NutritionFormState extends State<NutritionForm> {
         carbs: double.tryParse(_carbsController.text) ?? 0,
         fats: double.tryParse(_fatsController.text) ?? 0,
         protein: double.tryParse(_proteinController.text) ?? 0,
+        fiber: double.tryParse(_fiberController.text) ?? 0,
         date: _date,
       );
 
@@ -182,6 +186,20 @@ class _NutritionFormState extends State<NutritionForm> {
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
                     ? 'Enter protein'
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _fiberController,
+                decoration: const InputDecoration(
+                  labelText: 'Fiber',
+                  suffixText: 'g',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter fiber'
                     : null,
               ),
               const SizedBox(height: 16),
