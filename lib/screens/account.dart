@@ -111,14 +111,6 @@ class AccountPage extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Navigator.pop(context);
-              _clearAllData(context, provider);
-            },
-            child: const Text('Erase'),
-          ),
         ],
       ),
     );
