@@ -84,7 +84,7 @@ class ExpenseProvider extends ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print('Error listening to expenses: $error');
+            debugPrint('Error listening to expenses: $error');
             Logger.error(
               "Error listening to expenses",
               data: {"user": user, "error": error.toString()},
@@ -106,7 +106,7 @@ class ExpenseProvider extends ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print('Error listening to categories: $error');
+            debugPrint('Error listening to categories: $error');
             Logger.error(
               "Error listening to categories",
               data: {"user": user, "error": error.toString()},
@@ -127,7 +127,7 @@ class ExpenseProvider extends ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print('Error listening to nutrition: $error');
+            debugPrint('Error listening to nutrition: $error');
             Logger.error(
               "Error listening to nutrition",
               data: {"user": user, "error": error.toString()},
@@ -160,8 +160,8 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  void updateBudgets() {
-    _updateBudgets();
+  Future<void> updateBudgets() {
+    return _updateBudgets();
   }
 
   Future<void> _updateBudgets() async {
@@ -202,24 +202,27 @@ class ExpenseProvider extends ChangeNotifier {
     );
 
     final userRef = _firestore.collection('users').doc(user);
+    final fromRef = userRef.collection('categories').doc(from);
+    final toRef = userRef.collection('categories').doc(to);
 
-    // Update from budget
+    await _firestore.runTransaction((transaction) async {
+      final fromSnap = await transaction.get(fromRef);
+      final toSnap = await transaction.get(toRef);
+
+      if (!fromSnap.exists || !toSnap.exists) return;
+
+      final newFromBalance = (fromSnap.data()?['balance'] as num? ?? 0).toDouble() - amount;
+      final newToBalance = (toSnap.data()?['balance'] as num? ?? 0).toDouble() + amount;
+
+      transaction.update(fromRef, {'balance': newFromBalance});
+      transaction.update(toRef, {'balance': newToBalance});
+    });
+
+    // Keep local state consistent with Firestore after the transaction succeeds
     final fromBudget = _budgets[from];
-    if (fromBudget != null) {
-      fromBudget.balance -= amount;
-      await userRef.collection('categories').doc(from).update({
-        'balance': fromBudget.balance,
-      });
-    }
-
-    // Update to budget
+    if (fromBudget != null) fromBudget.balance -= amount;
     final toBudget = _budgets[to];
-    if (toBudget != null) {
-      toBudget.balance += amount;
-      await userRef.collection('categories').doc(to).update({
-        'balance': toBudget.balance,
-      });
-    }
+    if (toBudget != null) toBudget.balance += amount;
   }
 
   /// Adds a new expense to Firestore and updates the balance
@@ -305,9 +308,9 @@ class ExpenseProvider extends ChangeNotifier {
         'balance': FieldValue.increment(expense.price),
       });
 
-      print("deleted expense ${expense.id}");
+      debugPrint("deleted expense ${expense.id}");
     } catch (e) {
-      print("Error deleting expense: $e");
+      debugPrint("Error deleting expense: $e");
       Logger.error(
         "Error deleting expense",
         data: {
@@ -352,16 +355,19 @@ class ExpenseProvider extends ChangeNotifier {
             .where('category', isEqualTo: oldName)
             .get();
 
+        final batch = _firestore.batch();
         for (var doc in expensesSnapshot.docs) {
-          await doc.reference.update({'category': updatedBudget.name});
+          batch.update(doc.reference, {'category': updatedBudget.name});
         }
 
         // Delete old category and create new one
-        await userRef.collection('categories').doc(oldName).delete();
-        await userRef
-            .collection('categories')
-            .doc(updatedBudget.name)
-            .set(updatedBudget.toJson());
+        batch.delete(userRef.collection('categories').doc(oldName));
+        batch.set(
+          userRef.collection('categories').doc(updatedBudget.name),
+          updatedBudget.toJson(),
+        );
+
+        await batch.commit();
       } else {
         // Otherwise just update the existing document
         await userRef
@@ -408,9 +414,11 @@ class ExpenseProvider extends ChangeNotifier {
     final userRef = _firestore.collection('users').doc(user);
     final snapshot = await userRef.collection('expenses').get();
 
+    final batch = _firestore.batch();
     for (var doc in snapshot.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 
   Future<void> deleteAllBudgets() async {
@@ -419,9 +427,11 @@ class ExpenseProvider extends ChangeNotifier {
     final userRef = _firestore.collection('users').doc(user);
     final snapshot = await userRef.collection('categories').get();
 
+    final batch = _firestore.batch();
     for (var doc in snapshot.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 
   /// Adds a new nutrition entry to Firestore
