@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'providers/expense_provider.dart';
 import 'screens/data_page.dart';
+import 'screens/login_screen.dart';
+import 'screens/setup_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -18,14 +20,10 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  ExpenseProvider provider = ExpenseProvider();
-  provider.loadUser();
-
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => provider),
-        // Add other providers here if needed
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const MyApp(),
     ),
@@ -80,7 +78,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'Expense Tracker',
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
-      home: const DataPage(),
+      home: Consumer<ExpenseProvider>(
+        builder: (context, provider, _) {
+          if (provider.authLoading) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (!provider.isLoggedIn) return const LoginScreen();
+          if (provider.needsAccountSetup) return const SetupScreen();
+          return const DataPage();
+        },
+      ),
     );
   }
 }
