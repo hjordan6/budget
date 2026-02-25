@@ -1,22 +1,34 @@
 import 'package:budget/log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/expense.dart';
 import '../models/category.dart';
 import '../models/nutrition.dart';
+import '../services/auth_service.dart';
 import 'dart:async';
 
 enum AppPage { list, categories, account, saving, nutrition, nutritionHistory }
 
 class ExpenseProvider extends ChangeNotifier {
   ExpenseProvider() {
-    _loadUser();
+    _authSubscription =
+        AuthService().authStateChanges.listen(_onAuthStateChanged);
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String? user;
+
+  // --- Auth state ---
+  bool _authLoading = true;
+  bool _needsAccountSetup = false;
+  StreamSubscription<User?>? _authSubscription;
+
+  bool get authLoading => _authLoading;
+  bool get needsAccountSetup => _needsAccountSetup;
+  bool get isLoggedIn => AuthService().currentUser != null;
+  String? get authEmail => AuthService().currentUser?.email;
 
   List<Expense> _expenses = [];
   Map<String, BudgetCategory> _budgets = {};
@@ -34,36 +46,49 @@ class ExpenseProvider extends ChangeNotifier {
   AppPage get currentView => _currentView;
 
   void loadUser() {
-    _loadUser();
+    // No-op: auth state is managed via Firebase Auth stream.
   }
 
-  // Load user from shared preferences
-  Future<void> _loadUser() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUser = prefs.getString('user');
-      if (savedUser != null && savedUser.isNotEmpty) {
-        user = savedUser;
-        _startListening();
-        notifyListeners();
+  // Handle Firebase Auth state changes.
+  Future<void> _onAuthStateChanged(User? firebaseUser) async {
+    if (firebaseUser == null) {
+      _stopListening();
+      user = null;
+      _expenses = [];
+      _budgets = {};
+      _nutrition = [];
+      _needsAccountSetup = false;
+      _authLoading = false;
+      notifyListeners();
+    } else {
+      _authLoading = true;
+      notifyListeners();
+      try {
+        final username = await AuthService().getLinkedUsername();
+        if (username != null && username.isNotEmpty) {
+          _needsAccountSetup = false;
+          user = username;
+          _startListening();
+        } else {
+          _needsAccountSetup = true;
+          _stopListening();
+          user = null;
+        }
+      } catch (e) {
+        debugPrint('Error fetching linked username: $e');
+        _needsAccountSetup = true;
+        user = null;
       }
-    } catch (e) {
-      debugPrint('Error loading user from preferences: $e');
+      _authLoading = false;
+      notifyListeners();
     }
   }
 
-  // Save user to shared preferences
-  Future<void> _saveUser(String? userName) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (userName != null && userName.isNotEmpty) {
-        await prefs.setString('user', userName);
-      } else {
-        await prefs.remove('user');
-      }
-    } catch (e) {
-      debugPrint('Error saving user to preferences: $e');
-    }
+  /// Called after the user completes account setup (link or create username).
+  Future<void> completeAccountSetup(String username) async {
+    await AuthService().linkToUsername(username);
+    _needsAccountSetup = false;
+    setUser(username);
   }
 
   void _startListening() {
@@ -149,7 +174,6 @@ class ExpenseProvider extends ChangeNotifier {
     if (user != newUser) {
       _stopListening();
       user = newUser;
-      _saveUser(newUser); // Save to shared preferences
       _expenses = [];
       _budgets = {};
       _nutrition = [];
@@ -461,6 +485,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _stopListening();
     super.dispose();
   }
