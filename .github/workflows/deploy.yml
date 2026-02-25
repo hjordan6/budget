@@ -1,0 +1,52 @@
+name: Deploy to Firebase
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "FIREBASE_ENV=prod" >> $GITHUB_OUTPUT
+            echo "PROJECT_ID=budget-21dbe" >> $GITHUB_OUTPUT
+          else
+            echo "FIREBASE_ENV=dev" >> $GITHUB_OUTPUT
+            echo "PROJECT_ID=budget-dev-6465b" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build web
+        run: flutter build web --release --dart-define=FIREBASE_ENV=${{ steps.env.outputs.FIREBASE_ENV }}
+
+      - name: Deploy Prod to Firebase
+        if: github.ref == 'refs/heads/main'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}'
+          channelId: live
+          projectId: budget-21dbe
+
+      - name: Deploy Dev to Firebase
+        if: github.ref != 'refs/heads/main'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}'
+          channelId: live
+          projectId: budget-dev-6465b

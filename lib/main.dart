@@ -10,6 +10,13 @@ import 'firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Set Firebase environment
+  // You can control this with --dart-define=FIREBASE_ENV=dev
+  const env = String.fromEnvironment('FIREBASE_ENV', defaultValue: 'dev');
+  DefaultFirebaseOptions.setEnvironment(
+    env == 'dev' ? FirebaseEnv.dev : FirebaseEnv.prod,
+  );
+
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 

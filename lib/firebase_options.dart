@@ -4,7 +4,12 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Default [FirebaseOptions] for use with your Firebase apps.
+/// Environment-aware Firebase configuration
+/// Set environment variable FIREBASE_ENV=dev to use dev project
+/// or FIREBASE_ENV=prod (or leave unset) to use production
+enum FirebaseEnv { dev, prod }
+
+/// Default [FirebaseOptions] for use with your Firebase apps that dynamically switches between dev and prod.
 ///
 /// Example:
 /// ```dart
@@ -15,15 +20,26 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  static FirebaseEnv _environment = FirebaseEnv.prod;
+
+  /// Set the environment to dev or prod
+  static void setEnvironment(FirebaseEnv env) {
+    _environment = env;
+  }
+
+  /// Get current environment
+  static FirebaseEnv get environment => _environment;
+
   static FirebaseOptions get currentPlatform {
+    final isDev = _environment == FirebaseEnv.dev;
     if (kIsWeb) {
-      return web;
+      return isDev ? webDev : web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return android;
+        return isDev ? androidDev : android;
       case TargetPlatform.iOS:
-        return ios;
+        return isDev ? iosDev : ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -45,6 +61,8 @@ class DefaultFirebaseOptions {
         );
     }
   }
+
+  // ===== PRODUCTION CONFIGURATIONS =====
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyA1RZWB8nq_siP3WNhvJob-go5of1d8pjQ',
@@ -71,5 +89,34 @@ class DefaultFirebaseOptions {
     projectId: 'budget-21dbe',
     storageBucket: 'budget-21dbe.firebasestorage.app',
     iosBundleId: 'com.example.budget',
+  );
+
+  // ===== DEV CONFIGURATIONS =====
+
+  static const FirebaseOptions webDev = FirebaseOptions(
+    apiKey: 'AIzaSyBYyBtpX80FB2PM58mVEjT9V3ITgqgIWAY',
+    appId: '1:84010342754:web:7211d6d4fdcdc09964f43b',
+    messagingSenderId: '84010342754',
+    projectId: 'budget-dev-6465b',
+    authDomain: 'budget-dev-6465b.firebaseapp.com',
+    storageBucket: 'budget-dev-6465b.firebasestorage.app',
+    measurementId: 'G-BP4VR7ZH0C',
+  );
+
+  static const FirebaseOptions androidDev = FirebaseOptions(
+    apiKey: 'AIzaSyCoNXqDAxU2QqLZry3C0PAMEvD08qP9uFE',
+    appId: '1:84010342754:android:bee572d979f9dcc764f43b',
+    messagingSenderId: '84010342754',
+    projectId: 'budget-dev-6465b',
+    storageBucket: 'budget-dev-6465b.firebasestorage.app',
+  );
+
+  static const FirebaseOptions iosDev = FirebaseOptions(
+    apiKey: 'YOUR_DEV_IOS_API_KEY',
+    appId: 'YOUR_DEV_IOS_APP_ID',
+    messagingSenderId: 'YOUR_DEV_MESSAGING_SENDER_ID',
+    projectId: 'budget-dev-6465b',
+    storageBucket: 'budget-dev-6465b.firebasestorage.app',
+    iosBundleId: 'com.example.budget.dev',
   );
 }
