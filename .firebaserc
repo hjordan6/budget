@@ -1,7 +1,9 @@
 {
   "projects": {
     "default": "budget-21dbe",
-    "budget-dev": "budget-dev-6465b"
+    "budget-dev": "budget-dev-6465b",
+    "prod": "budget-21dbe",
+    "dev": "budget-dev-6465b"
   },
   "targets": {},
   "etags": {}
