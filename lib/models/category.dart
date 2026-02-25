@@ -71,6 +71,7 @@ class BudgetCategory {
       balance: (json['balance'] as num).toDouble(),
       interval: BudgetInterval.values.firstWhere(
         (e) => e.toString() == 'BudgetInterval.${json['interval']}',
+        orElse: () => BudgetInterval.month,
       ),
       nextUpdate: (json['nextUpdate'] as Timestamp).toDate(),
       notes: json['notes'] ?? '',

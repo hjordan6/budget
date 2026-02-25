@@ -2,10 +2,10 @@ import 'package:budget/screens/account.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
-import 'expense_form.dart';
-import 'category_form.dart';
 import 'transactions.dart';
 import 'budgets.dart';
+import 'nutrition.dart';
+import 'nutrition_history.dart';
 
 class DataPage extends StatelessWidget {
   const DataPage({super.key});
@@ -15,6 +15,10 @@ class DataPage extends StatelessWidget {
       return AppBar(title: Text("Transactions"));
     } else if (page == AppPage.categories) {
       return AppBar(title: Text("Budget Categories"));
+    } else if (page == AppPage.nutrition) {
+      return AppBar(title: Text("Nutrition Tracker"));
+    } else if (page == AppPage.nutritionHistory) {
+      return AppBar(title: Text("Nutrition History"));
     } else {
       return AppBar(title: Text("Account Info"));
     }
@@ -29,6 +33,8 @@ class DataPage extends StatelessWidget {
       AppPage.list: const ExpenseListPage(),
       AppPage.categories: const CategorySummaryPage(),
       AppPage.account: const AccountPage(),
+      AppPage.nutrition: const NutritionTrackerPage(),
+      AppPage.nutritionHistory: const NutritionHistoryPage(),
     };
 
     return Scaffold(
@@ -64,6 +70,24 @@ class DataPage extends StatelessWidget {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.restaurant_menu),
+              title: const Text('Nutrition Tracker'),
+              selected: currentPage == AppPage.nutrition,
+              onTap: () {
+                provider.toggleView(AppPage.nutrition);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Nutrition History'),
+              selected: currentPage == AppPage.nutritionHistory,
+              onTap: () {
+                provider.toggleView(AppPage.nutritionHistory);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.person),
               title: const Text('Account Actions'),
               selected: currentPage == AppPage.account,
@@ -76,22 +100,6 @@ class DataPage extends StatelessWidget {
         ),
       ),
       body: pageMap[currentPage] ?? const Center(child: Text('Page not found')),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (currentPage == AppPage.list) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ExpenseForm()),
-            );
-          } else if (currentPage == AppPage.categories) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CategoryForm()),
-            );
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
