@@ -254,9 +254,13 @@ void _showAIMealSheet(BuildContext context) {
               - Estimate portion sizes based on visual cues (plates, hands, utensils) or text descriptions.
               - Use current (2026) nutritional data for known chains (e.g., Dave's Hot Chicken, Cafe Rio).
               - ALWAYS return only a valid JSON object. Do not include markdown formatting like ```json ... ``` in the response.
-              - In summary explain the reasoning behind scores and totals including where the calories and protien come from. Format in paragraphs.
+              - In summary explain the reasoning behind scores and totals including where the calories and protien come from. Example:
+              CALORIES: Mostly from the bun, a little from breading and fats in the sauce
+              PROTEIN: Mostly from the chicken, a little from the bun and sauce
+              ...
               - In counter balance give tips on improving this meal in the future, as well as suggestion for future meals that day or the next morning.
               - Additionally you will be provided with a list of the user's recent meals (today and yesterday) with the same nutritional breakdown. Use this data to give personalized feedback based on their recent eating patterns, in the counter balance you can talk about the trends you see in their meals from the last 24 - 48 hours and give suggestions based on that.
+              - The goal is not to be overly critical but to give actionable feedback and advice to help the user make informed choices and improve their nutrition over time.
 
               ### OUTPUT JSON SCHEMA:
               {
@@ -283,21 +287,12 @@ void _showAIMealSheet(BuildContext context) {
               }
               ''';
 
-              final allEntries = Provider.of<ExpenseProvider>(
+              // Fetch only recent meals instead of filtering all entries
+              final provider = Provider.of<ExpenseProvider>(
                 context,
                 listen: false,
-              ).nutrition;
-              final now = DateTime.now();
-              final yesterday = now.subtract(const Duration(days: 1));
-              final recentMeals = allEntries.where(
-                (e) =>
-                    (e.date.year == now.year &&
-                        e.date.month == now.month &&
-                        e.date.day == now.day) ||
-                    (e.date.year == yesterday.year &&
-                        e.date.month == yesterday.month &&
-                        e.date.day == yesterday.day),
               );
+              final recentMeals = await provider.getRecentNutrition(hours: 48);
               final recentMealsJson = recentMeals
                   .map(
                     (e) => {

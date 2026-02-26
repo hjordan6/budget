@@ -12,8 +12,9 @@ enum AppPage { list, categories, account, saving, nutrition, nutritionHistory }
 
 class ExpenseProvider extends ChangeNotifier {
   ExpenseProvider() {
-    _authSubscription =
-        AuthService().authStateChanges.listen(_onAuthStateChanged);
+    _authSubscription = AuthService().authStateChanges.listen(
+      _onAuthStateChanged,
+    );
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -235,8 +236,10 @@ class ExpenseProvider extends ChangeNotifier {
 
       if (!fromSnap.exists || !toSnap.exists) return;
 
-      final newFromBalance = (fromSnap.data()?['balance'] as num? ?? 0).toDouble() - amount;
-      final newToBalance = (toSnap.data()?['balance'] as num? ?? 0).toDouble() + amount;
+      final newFromBalance =
+          (fromSnap.data()?['balance'] as num? ?? 0).toDouble() - amount;
+      final newToBalance =
+          (toSnap.data()?['balance'] as num? ?? 0).toDouble() + amount;
 
       transaction.update(fromRef, {'balance': newFromBalance});
       transaction.update(toRef, {'balance': newToBalance});
@@ -481,6 +484,24 @@ class ExpenseProvider extends ChangeNotifier {
 
   Map<String, double> get categoryTotals {
     return {for (var b in _budgets.values) b.name: b.balance};
+  }
+
+  /// Fetch only nutrition entries from the last 48 hours
+  Future<List<NutritionEntry>> getRecentNutrition({int hours = 48}) async {
+    if (user == null) return [];
+
+    final cutoff = DateTime.now().subtract(Duration(hours: hours));
+    final userRef = _firestore.collection('users').doc(user);
+
+    final snapshot = await userRef
+        .collection('nutrition')
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(cutoff))
+        .orderBy('date', descending: true)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      return NutritionEntry.fromJson(doc.data(), doc.id);
+    }).toList();
   }
 
   @override
