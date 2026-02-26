@@ -13,6 +13,16 @@ class NutritionForm extends StatefulWidget {
     this.initialFats,
     this.initialProtein,
     this.initialFiber,
+    this.initialScore,
+    this.initialBreakdown,
+    this.initialVolumePoints,
+    this.initialNetCarbs,
+    this.initialAddedSugar,
+    this.initialSodium,
+    this.initialFiberLight,
+    this.initialSugarLight,
+    this.initialFatLight,
+    this.initialCounterBalanceTip,
   });
 
   final String? initialMealName;
@@ -21,6 +31,16 @@ class NutritionForm extends StatefulWidget {
   final double? initialFats;
   final double? initialProtein;
   final double? initialFiber;
+  final String? initialScore;
+  final String? initialBreakdown;
+  final double? initialVolumePoints;
+  final double? initialNetCarbs;
+  final double? initialAddedSugar;
+  final double? initialSodium;
+  final String? initialFiberLight;
+  final String? initialSugarLight;
+  final String? initialFatLight;
+  final String? initialCounterBalanceTip;
 
   @override
   State<NutritionForm> createState() => _NutritionFormState();
@@ -100,6 +120,16 @@ class _NutritionFormState extends State<NutritionForm> {
         protein: double.tryParse(_proteinController.text) ?? 0,
         fiber: double.tryParse(_fiberController.text) ?? 0,
         date: _date,
+        score: widget.initialScore,
+        breakdown: widget.initialBreakdown,
+        volumePoints: widget.initialVolumePoints,
+        netCarbs: widget.initialNetCarbs,
+        addedSugar: widget.initialAddedSugar,
+        sodium: widget.initialSodium,
+        fiberLight: widget.initialFiberLight,
+        sugarLight: widget.initialSugarLight,
+        fatLight: widget.initialFatLight,
+        counterBalanceTip: widget.initialCounterBalanceTip,
       );
 
       context.read<ExpenseProvider>().addNutritionEntry(newEntry);
