@@ -248,7 +248,7 @@ void _showAIMealSheet(BuildContext context) {
               2. Fiber Score: Green (High > 8g), Yellow (Med 4-8g), Red (Low < 4g).
               3. Sugar Score: Green (Low < 5g), Yellow (Med 5-15g), Red (High > 15g).
               4. Fat Quality Score: Green (Plant/Healthy), Yellow (Moderate/Animal), Red (High Saturated/Processed).
-              5. Overall Score: Green, Yellow, Orange, or Red based on net nutrient density.
+              5. Overall Score: Green, Yellow, Orange, or Red based on net nutrient density. Green would be a meal or snack you could eat every day. Yellow is fine. Orange is okay in moderation. Red should be only eaten occasionally.
 
               ### CONSTRAINTS:
               - Estimate portion sizes based on visual cues (plates, hands, utensils) or text descriptions.
@@ -256,6 +256,7 @@ void _showAIMealSheet(BuildContext context) {
               - ALWAYS return only a valid JSON object. Do not include markdown formatting like ```json ... ``` in the response.
               - In summary explain the reasoning behind scores and totals including where the calories and protien come from. Format in paragraphs.
               - In counter balance give tips on improving this meal in the future, as well as suggestion for future meals that day or the next morning.
+              - Additionally you will be provided with a list of the user's recent meals (today and yesterday) with the same nutritional breakdown. Use this data to give personalized feedback based on their recent eating patterns, in the counter balance you can talk about the trends you see in their meals from the last 24 - 48 hours and give suggestions based on that.
 
               ### OUTPUT JSON SCHEMA:
               {
@@ -282,6 +283,48 @@ void _showAIMealSheet(BuildContext context) {
               }
               ''';
 
+              final allEntries = Provider.of<ExpenseProvider>(
+                context,
+                listen: false,
+              ).nutrition;
+              final now = DateTime.now();
+              final yesterday = now.subtract(const Duration(days: 1));
+              final recentMeals = allEntries.where(
+                (e) =>
+                    (e.date.year == now.year &&
+                        e.date.month == now.month &&
+                        e.date.day == now.day) ||
+                    (e.date.year == yesterday.year &&
+                        e.date.month == yesterday.month &&
+                        e.date.day == yesterday.day),
+              );
+              final recentMealsJson = recentMeals
+                  .map(
+                    (e) => {
+                      'meal_name': e.mealName,
+                      'volume_points': e.volumePoints,
+                      'overall_score': e.score,
+                      'nutrients_numeric': {
+                        'calories': e.calories,
+                        'protein_g': e.protein,
+                        'total_carbs_g': e.carbs,
+                        'net_carbs_g': e.netCarbs,
+                        'fiber_g': e.fiber,
+                        'fat_g': e.fats,
+                        'added_sugar_g': e.addedSugar,
+                        'sodium_mg': e.sodium,
+                      },
+                      'quality_ratings': {
+                        'fiber_light': e.fiberLight,
+                        'sugar_light': e.sugarLight,
+                        'fat_light': e.fatLight,
+                      },
+                      'summary': e.breakdown,
+                      'counter_balance_tip': e.counterBalanceTip,
+                    },
+                  )
+                  .toList();
+
               final List<Part> parts = [];
               if (pickedImage != null && pickedImageBytes != null) {
                 final mimeType = pickedImage!.mimeType ?? 'image/jpeg';
@@ -290,8 +333,8 @@ void _showAIMealSheet(BuildContext context) {
               parts.add(
                 TextPart(
                   query.isNotEmpty
-                      ? '$nutritionSystemPrompt\nMeal: $query'
-                      : nutritionSystemPrompt,
+                      ? '$nutritionSystemPrompt\nRecent meals (today and yesterday): ${jsonEncode(recentMealsJson)}\nMeal: $query'
+                      : '$nutritionSystemPrompt\nRecent meals (today and yesterday): ${jsonEncode(recentMealsJson)}',
                 ),
               );
 
