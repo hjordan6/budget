@@ -239,12 +239,46 @@ void _showAIMealSheet(BuildContext context) {
               final model = FirebaseAI.googleAI().generativeModel(
                 model: 'gemini-2.5-flash',
               );
-              const prompt =
-                  'You are a nutrition assistant. Given a meal description and/or image, respond ONLY with a JSON object in this exact format, with no extra text or markdown. Do your best to estimate all values.\n'
-                  'Additionally please provide the meal a score of green, yellow, orange or red based on how ballanced it is as far as fiber, fat profile, protien, etc.'
-                  'Lastly please include any comments about the meal, including the breakdown of all nutrients and any suggestions for improvement to make it more balanced and healthy. Include this in a breakdown value\n'
-                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0, "fiber": 0, "score": "...", "breakdown": "..."}\n'
-                  'All numeric values must be numbers (not strings).';
+              String nutritionSystemPrompt = '''
+              You are a professional nutritional analyst and personal health assistant. 
+              Your goal is to analyze food images or text descriptions and return a structured JSON response based on the "Balanced Life Tracking System."
+
+              ### THE SCORING SYSTEM:
+              1. Volume (Points): 1-10 (1 = Snack, 5 = Standard Meal, 8+ = Large/Heavy Restaurant Meal).
+              2. Fiber Score: Green (High > 8g), Yellow (Med 4-8g), Red (Low < 4g).
+              3. Sugar Score: Green (Low < 5g), Yellow (Med 5-15g), Red (High > 15g).
+              4. Fat Quality Score: Green (Plant/Healthy), Yellow (Moderate/Animal), Red (High Saturated/Processed).
+              5. Overall Score: Green, Yellow, Orange, or Red based on net nutrient density.
+
+              ### CONSTRAINTS:
+              - Estimate portion sizes based on visual cues (plates, hands, utensils) or text descriptions.
+              - Use current (2026) nutritional data for known chains (e.g., Dave's Hot Chicken, Cafe Rio).
+              - ALWAYS return only a valid JSON object. Do not include markdown formatting like ```json ... ``` in the response.
+
+              ### OUTPUT JSON SCHEMA:
+              {
+                "meal_name": "string",
+                "volume_points": number,
+                "overall_score": "Green/Yellow/Orange/Red",
+                "nutrients_numeric": {
+                  "calories": number,
+                  "protein_g": number,
+                  "total_carbs_g": number,
+                  "net_carbs_g": number,
+                  "fiber_g": number,
+                  "fat_g": number,
+                  "added_sugar_g": number,
+                  "sodium_mg": number
+                },
+                "quality_ratings": {
+                  "fiber_light": "Green/Yellow/Red",
+                  "sugar_light": "Green/Yellow/Red",
+                  "fat_light": "Green/Yellow/Red"
+                },
+                "summary": "string",
+                "counter_balance_tip": "string"
+              }
+              ''';
 
               final List<Part> parts = [];
               if (pickedImage != null && pickedImageBytes != null) {
@@ -252,7 +286,11 @@ void _showAIMealSheet(BuildContext context) {
                 parts.add(InlineDataPart(mimeType, pickedImageBytes!));
               }
               parts.add(
-                TextPart(query.isNotEmpty ? '$prompt Meal: $query' : prompt),
+                TextPart(
+                  query.isNotEmpty
+                      ? '$nutritionSystemPrompt\nMeal: $query'
+                      : nutritionSystemPrompt,
+                ),
               );
 
               final response = await model.generateContent([
@@ -265,9 +303,9 @@ void _showAIMealSheet(BuildContext context) {
               if (jsonStart == -1 || jsonEnd == -1) {
                 throw FormatException('No JSON in response');
               }
-              final data = jsonDecode(
-                text.substring(jsonStart, jsonEnd + 1),
-              ) as Map<String, dynamic>;
+              final data =
+                  jsonDecode(text.substring(jsonStart, jsonEnd + 1))
+                      as Map<String, dynamic>;
 
               if (ctx.mounted) {
                 Navigator.pop(ctx);
@@ -275,14 +313,31 @@ void _showAIMealSheet(BuildContext context) {
                   context,
                   MaterialPageRoute(
                     builder: (_) => NutritionForm(
-                      initialMealName: data['mealName'] as String?,
-                      initialCalories: (data['calories'] as num?)?.toDouble(),
-                      initialCarbs: (data['carbs'] as num?)?.toDouble(),
-                      initialFats: (data['fats'] as num?)?.toDouble(),
-                      initialProtein: (data['protein'] as num?)?.toDouble(),
-                      initialFiber: (data['fiber'] as num?)?.toDouble(),
-                      initialScore: data['score'] as String?,
-                      initialBreakdown: data['breakdown'] as String?,
+                      initialMealName: data['meal_name'] as String?,
+                      initialCalories:
+                          (data['nutrients_numeric']?['calories'] as num?)
+                              ?.toDouble(),
+                      initialCarbs:
+                          (data['nutrients_numeric']?['total_carbs_g'] as num?)
+                              ?.toDouble(),
+                      initialFats: (data['nutrients_numeric']?['fat_g'] as num?)
+                          ?.toDouble(),
+                      initialProtein:
+                          (data['nutrients_numeric']?['protein_g'] as num?)
+                              ?.toDouble(),
+                      initialFiber:
+                          (data['nutrients_numeric']?['fiber_g'] as num?)
+                              ?.toDouble(),
+                      initialScore: data['overall_score'] as String?,
+                      initialBreakdown: data['summary'] as String?,
+                      initialVolumePoints: (data['volume_points'] as num?)?.toDouble(),
+                      initialNetCarbs: (data['nutrients_numeric']?['net_carbs_g'] as num?)?.toDouble(),
+                      initialAddedSugar: (data['nutrients_numeric']?['added_sugar_g'] as num?)?.toDouble(),
+                      initialSodium: (data['nutrients_numeric']?['sodium_mg'] as num?)?.toDouble(),
+                      initialFiberLight: data['quality_ratings']?['fiber_light'] as String?,
+                      initialSugarLight: data['quality_ratings']?['sugar_light'] as String?,
+                      initialFatLight: data['quality_ratings']?['fat_light'] as String?,
+                      initialCounterBalanceTip: data['counter_balance_tip'] as String?,
                     ),
                   ),
                 );
