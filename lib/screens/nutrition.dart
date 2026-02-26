@@ -254,6 +254,8 @@ void _showAIMealSheet(BuildContext context) {
               - Estimate portion sizes based on visual cues (plates, hands, utensils) or text descriptions.
               - Use current (2026) nutritional data for known chains (e.g., Dave's Hot Chicken, Cafe Rio).
               - ALWAYS return only a valid JSON object. Do not include markdown formatting like ```json ... ``` in the response.
+              - In summary explain the reasoning behind scores and totals including where the calories and protien come from. Format in paragraphs.
+              - In counter balance give tips on improving this meal in the future, as well as suggestion for future meals that day or the next morning.
 
               ### OUTPUT JSON SCHEMA:
               {
@@ -330,14 +332,25 @@ void _showAIMealSheet(BuildContext context) {
                               ?.toDouble(),
                       initialScore: data['overall_score'] as String?,
                       initialBreakdown: data['summary'] as String?,
-                      initialVolumePoints: (data['volume_points'] as num?)?.toDouble(),
-                      initialNetCarbs: (data['nutrients_numeric']?['net_carbs_g'] as num?)?.toDouble(),
-                      initialAddedSugar: (data['nutrients_numeric']?['added_sugar_g'] as num?)?.toDouble(),
-                      initialSodium: (data['nutrients_numeric']?['sodium_mg'] as num?)?.toDouble(),
-                      initialFiberLight: data['quality_ratings']?['fiber_light'] as String?,
-                      initialSugarLight: data['quality_ratings']?['sugar_light'] as String?,
-                      initialFatLight: data['quality_ratings']?['fat_light'] as String?,
-                      initialCounterBalanceTip: data['counter_balance_tip'] as String?,
+                      initialVolumePoints: (data['volume_points'] as num?)
+                          ?.toDouble(),
+                      initialNetCarbs:
+                          (data['nutrients_numeric']?['net_carbs_g'] as num?)
+                              ?.toDouble(),
+                      initialAddedSugar:
+                          (data['nutrients_numeric']?['added_sugar_g'] as num?)
+                              ?.toDouble(),
+                      initialSodium:
+                          (data['nutrients_numeric']?['sodium_mg'] as num?)
+                              ?.toDouble(),
+                      initialFiberLight:
+                          data['quality_ratings']?['fiber_light'] as String?,
+                      initialSugarLight:
+                          data['quality_ratings']?['sugar_light'] as String?,
+                      initialFatLight:
+                          data['quality_ratings']?['fat_light'] as String?,
+                      initialCounterBalanceTip:
+                          data['counter_balance_tip'] as String?,
                     ),
                   ),
                 );
