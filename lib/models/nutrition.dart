@@ -10,6 +10,8 @@ class NutritionEntry {
   final double protein;
   final double fiber;
   final DateTime date;
+  final String? score;
+  final String? breakdown;
 
   NutritionEntry({
     String? id,
@@ -20,6 +22,8 @@ class NutritionEntry {
     required this.protein,
     this.fiber = 0,
     required this.date,
+    this.score,
+    this.breakdown,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toJson() {
@@ -32,6 +36,8 @@ class NutritionEntry {
       'protein': protein,
       'fiber': fiber,
       'date': date,
+      if (score != null) 'score': score,
+      if (breakdown != null) 'breakdown': breakdown,
     };
   }
 
@@ -45,6 +51,8 @@ class NutritionEntry {
       protein: (json['protein'] as num).toDouble(),
       fiber: (json['fiber'] as num? ?? 0).toDouble(),
       date: (json['date'] as Timestamp).toDate(),
+      score: json['score'] as String?,
+      breakdown: json['breakdown'] as String?,
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../log.dart';
 import '../providers/expense_provider.dart';
 import 'nutrition_form.dart';
+import 'nutrition_detail.dart';
 
 class NutritionTrackerPage extends StatelessWidget {
   const NutritionTrackerPage({super.key});
@@ -132,7 +133,27 @@ class NutritionTrackerPage extends StatelessWidget {
               context.read<ExpenseProvider>().deleteNutritionEntry(entry);
             },
             child: ListTile(
-              title: Text(entry.mealName),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => NutritionDetailPage(entry: entry),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(child: Text(entry.mealName)),
+                  if (entry.score != null)
+                    Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(left: 6),
+                      decoration: BoxDecoration(
+                        color: _scoreColor(entry.score!),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
               subtitle: Text(dateFormatter.format(entry.date)),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -161,6 +182,21 @@ class NutritionTrackerPage extends StatelessWidget {
   }
 }
 
+Color _scoreColor(String score) {
+  switch (score.toLowerCase()) {
+    case 'green':
+      return Colors.green;
+    case 'yellow':
+      return Colors.amber;
+    case 'orange':
+      return Colors.orange;
+    case 'red':
+      return Colors.red;
+    default:
+      return Colors.grey;
+  }
+}
+
 void _showAIMealSheet(BuildContext context) {
   final controller = TextEditingController();
   bool isLoading = false;
@@ -176,7 +212,10 @@ void _showAIMealSheet(BuildContext context) {
           Future<void> pickImage(ImageSource source) async {
             try {
               final picker = ImagePicker();
-              final image = await picker.pickImage(source: source, imageQuality: 85);
+              final image = await picker.pickImage(
+                source: source,
+                imageQuality: 85,
+              );
               if (image != null) {
                 final bytes = await image.readAsBytes();
                 setSheetState(() {
@@ -201,8 +240,10 @@ void _showAIMealSheet(BuildContext context) {
                 model: 'gemini-2.5-flash',
               );
               const prompt =
-                  'You are a nutrition assistant. Given a meal description and/or image, respond ONLY with a JSON object in this exact format, with no extra text or markdown:\n'
-                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0, "fiber": 0}\n'
+                  'You are a nutrition assistant. Given a meal description and/or image, respond ONLY with a JSON object in this exact format, with no extra text or markdown. Do your best to estimate all values.\n'
+                  'Additionally please provide the meal a score of green, yellow, orange or red based on how ballanced it is as far as fiber, fat profile, protien, etc.'
+                  'Lastly please include any comments about the meal, including the breakdown of all nutrients and any suggestions for improvement to make it more balanced and healthy. Include this in a breakdown value\n'
+                  '{"mealName": "...", "calories": 0, "carbs": 0, "fats": 0, "protein": 0, "fiber": 0, "score": "...", "breakdown": "..."}\n'
                   'All numeric values must be numbers (not strings).';
 
               final List<Part> parts = [];
@@ -210,20 +251,23 @@ void _showAIMealSheet(BuildContext context) {
                 final mimeType = pickedImage!.mimeType ?? 'image/jpeg';
                 parts.add(InlineDataPart(mimeType, pickedImageBytes!));
               }
-              parts.add(TextPart(
-                query.isNotEmpty ? '$prompt Meal: $query' : prompt,
-              ));
+              parts.add(
+                TextPart(query.isNotEmpty ? '$prompt Meal: $query' : prompt),
+              );
 
               final response = await model.generateContent([
                 Content.multi(parts),
               ]);
               final text = response.text ?? '';
-              final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
-              if (jsonMatch == null) {
+              // Extract the outermost JSON object from the response
+              final jsonStart = text.indexOf('{');
+              final jsonEnd = text.lastIndexOf('}');
+              if (jsonStart == -1 || jsonEnd == -1) {
                 throw FormatException('No JSON in response');
               }
-              final data =
-                  jsonDecode(jsonMatch.group(0)!) as Map<String, dynamic>;
+              final data = jsonDecode(
+                text.substring(jsonStart, jsonEnd + 1),
+              ) as Map<String, dynamic>;
 
               if (ctx.mounted) {
                 Navigator.pop(ctx);
@@ -237,6 +281,8 @@ void _showAIMealSheet(BuildContext context) {
                       initialFats: (data['fats'] as num?)?.toDouble(),
                       initialProtein: (data['protein'] as num?)?.toDouble(),
                       initialFiber: (data['fiber'] as num?)?.toDouble(),
+                      initialScore: data['score'] as String?,
+                      initialBreakdown: data['breakdown'] as String?,
                     ),
                   ),
                 );

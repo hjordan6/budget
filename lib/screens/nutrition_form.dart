@@ -13,6 +13,8 @@ class NutritionForm extends StatefulWidget {
     this.initialFats,
     this.initialProtein,
     this.initialFiber,
+    this.initialScore,
+    this.initialBreakdown,
   });
 
   final String? initialMealName;
@@ -21,6 +23,8 @@ class NutritionForm extends StatefulWidget {
   final double? initialFats;
   final double? initialProtein;
   final double? initialFiber;
+  final String? initialScore;
+  final String? initialBreakdown;
 
   @override
   State<NutritionForm> createState() => _NutritionFormState();
@@ -100,6 +104,8 @@ class _NutritionFormState extends State<NutritionForm> {
         protein: double.tryParse(_proteinController.text) ?? 0,
         fiber: double.tryParse(_fiberController.text) ?? 0,
         date: _date,
+        score: widget.initialScore,
+        breakdown: widget.initialBreakdown,
       );
 
       context.read<ExpenseProvider>().addNutritionEntry(newEntry);
