@@ -45,15 +45,16 @@ class NutritionHistoryPage extends StatelessWidget {
     final entries = context.watch<ExpenseProvider>().nutrition;
     final today = _dateOnly(DateTime.now());
 
-    // Last 7 individual days, most recent first (today = index 0)
-    final last7Days = List.generate(7, (i) => today.subtract(Duration(days: i)));
+    // Last 7 individual days (excluding today), most recent first (yesterday = index 0)
+    final yesterday = today.subtract(const Duration(days: 1));
+    final last7Days = List.generate(7, (i) => yesterday.subtract(Duration(days: i)));
 
     // Rolling 7-day averages – divide only by days that have calories > 0
-    final sevenDaysAgo = today.subtract(const Duration(days: 6));
+    final sevenDaysAgo = today.subtract(const Duration(days: 7));
     final rolling7 = _totals(
       entries.where((e) {
         final d = _dateOnly(e.date);
-        return !d.isBefore(sevenDaysAgo) && !d.isAfter(today);
+        return !d.isBefore(sevenDaysAgo) && !d.isAfter(yesterday);
       }),
     );
     final activeDays7 = _activeDayCount(last7Days, entries);
