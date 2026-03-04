@@ -1,8 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import '../models/nutrition.dart';
 import '../providers/expense_provider.dart';
+import 'nutrition_ai_prompt.dart';
 
 class NutritionForm extends StatefulWidget {
   const NutritionForm({
@@ -23,6 +27,10 @@ class NutritionForm extends StatefulWidget {
     this.initialSugarLight,
     this.initialFatLight,
     this.initialCounterBalanceTip,
+    this.originalQuery,
+    this.originalImageBytes,
+    this.originalImageMimeType,
+    this.originalAiResponseJson,
   });
 
   final String? initialMealName;
@@ -41,6 +49,19 @@ class NutritionForm extends StatefulWidget {
   final String? initialSugarLight;
   final String? initialFatLight;
   final String? initialCounterBalanceTip;
+
+  /// The original text query the user typed when invoking the AI.
+  final String? originalQuery;
+
+  /// The original image bytes sent to the AI (if any).
+  final Uint8List? originalImageBytes;
+
+  /// The MIME type of [originalImageBytes].
+  final String? originalImageMimeType;
+
+  /// The raw JSON string returned by the AI in the initial analysis.
+  /// When non-null, an "Ask AI to Adjust" option is shown.
+  final String? originalAiResponseJson;
 
   @override
   State<NutritionForm> createState() => _NutritionFormState();
@@ -137,6 +158,175 @@ class _NutritionFormState extends State<NutritionForm> {
     }
   }
 
+  Future<void> _showAdjustmentSheet() async {
+    final adjustmentController = TextEditingController();
+    bool isLoading = false;
+    Map<String, dynamic>? result;
+
+    try {
+      result = await showModalBottomSheet<Map<String, dynamic>>(
+        context: context,
+        isScrollControlled: true,
+        builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            Future<void> submitAdjustment() async {
+              final userRequest = adjustmentController.text.trim();
+              if (userRequest.isEmpty) return;
+              setSheetState(() => isLoading = true);
+              try {
+                final model = FirebaseAI.googleAI().generativeModel(
+                  model: 'gemini-2.5-flash',
+                );
+
+                final List<Part> parts = [];
+                if (widget.originalImageBytes != null) {
+                  parts.add(InlineDataPart(
+                    widget.originalImageMimeType ?? 'image/jpeg',
+                    widget.originalImageBytes!,
+                  ));
+                }
+
+                final fullPrompt = StringBuffer(kNutritionSystemPrompt);
+                fullPrompt.writeln();
+                if (widget.originalQuery != null && widget.originalQuery!.isNotEmpty) {
+                  fullPrompt.writeln('The user originally described their meal as: "${widget.originalQuery!}"');
+                  fullPrompt.writeln();
+                }
+                fullPrompt.writeln('Your previous analysis was:');
+                fullPrompt.writeln(widget.originalAiResponseJson!);
+                fullPrompt.writeln();
+                fullPrompt.writeln('The user has reviewed your analysis and requests the following adjustment:');
+                fullPrompt.writeln(userRequest);
+                fullPrompt.writeln();
+                fullPrompt.writeln('Please provide a revised JSON response that incorporates the user\'s feedback. In the "summary" field, clearly explain what changed from the previous analysis and why you made these adjustments.');
+
+                parts.add(TextPart(fullPrompt.toString()));
+
+                final response = await model.generateContent([Content.multi(parts)]);
+                final text = response.text ?? '';
+                final jsonStart = text.indexOf('{');
+                final jsonEnd = text.lastIndexOf('}');
+                if (jsonStart == -1 || jsonEnd == -1) {
+                  throw const FormatException('No JSON in response');
+                }
+                final rawJson = text.substring(jsonStart, jsonEnd + 1);
+                final data = jsonDecode(rawJson) as Map<String, dynamic>;
+                data['_rawJson'] = rawJson;
+
+                if (ctx.mounted) {
+                  Navigator.pop(ctx, data);
+                }
+              } catch (e) {
+                setSheetState(() => isLoading = false);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'AI error: could not process adjustment. Please try again.',
+                      ),
+                    ),
+                  );
+                }
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 24,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Request AI Adjustment',
+                    style: Theme.of(ctx).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tell the AI what you\'d like to change about this analysis.',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: adjustmentController,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'e.g. The portion was larger, about 2x what you estimated',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    textInputAction: TextInputAction.done,
+                  ),
+                  const SizedBox(height: 16),
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : FilledButton.icon(
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('Submit Adjustment'),
+                          onPressed: submitAdjustment,
+                        ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    } finally {
+      adjustmentController.dispose();
+    }
+
+    if (result != null && mounted) {
+      final rawJson = result.remove('_rawJson') as String?;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NutritionForm(
+            initialMealName: result['meal_name'] as String?,
+            initialCalories:
+                (result['nutrients_numeric']?['calories'] as num?)?.toDouble(),
+            initialCarbs:
+                (result['nutrients_numeric']?['total_carbs_g'] as num?)
+                    ?.toDouble(),
+            initialFats:
+                (result['nutrients_numeric']?['fat_g'] as num?)?.toDouble(),
+            initialProtein:
+                (result['nutrients_numeric']?['protein_g'] as num?)?.toDouble(),
+            initialFiber:
+                (result['nutrients_numeric']?['fiber_g'] as num?)?.toDouble(),
+            initialScore: result['overall_score'] as String?,
+            initialBreakdown: result['summary'] as String?,
+            initialVolumePoints:
+                (result['volume_points'] as num?)?.toDouble(),
+            initialNetCarbs:
+                (result['nutrients_numeric']?['net_carbs_g'] as num?)
+                    ?.toDouble(),
+            initialAddedSugar:
+                (result['nutrients_numeric']?['added_sugar_g'] as num?)
+                    ?.toDouble(),
+            initialSodium:
+                (result['nutrients_numeric']?['sodium_mg'] as num?)?.toDouble(),
+            initialFiberLight:
+                result['quality_ratings']?['fiber_light'] as String?,
+            initialSugarLight:
+                result['quality_ratings']?['sugar_light'] as String?,
+            initialFatLight:
+                result['quality_ratings']?['fat_light'] as String?,
+            initialCounterBalanceTip: result['counter_balance_tip'] as String?,
+            originalQuery: widget.originalQuery,
+            originalImageBytes: widget.originalImageBytes,
+            originalImageMimeType: widget.originalImageMimeType,
+            originalAiResponseJson: rawJson,
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +347,60 @@ class _NutritionFormState extends State<NutritionForm> {
           key: _formKey,
           child: ListView(
             children: [
+              // AI summary card — shown when the form was pre-filled by AI
+              if (widget.initialBreakdown != null) ...[
+                Card(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 16,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSecondaryContainer,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'AI Analysis',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSecondaryContainer,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.initialBreakdown!,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSecondaryContainer,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (widget.originalAiResponseJson != null)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_note),
+                    label: const Text('Ask AI to Adjust'),
+                    onPressed: _showAdjustmentSheet,
+                  ),
+                const SizedBox(height: 16),
+              ],
               Autocomplete<NutritionEntry>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
                   if (textEditingValue.text.isEmpty) return const [];
