@@ -184,39 +184,6 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateBudgets() {
-    return _updateBudgets();
-  }
-
-  Future<void> _updateBudgets() async {
-    if (user == null) return;
-
-    final userRef = _firestore.collection('users').doc(user);
-    final now = DateTime.now();
-
-    for (var budget in _budgets.values) {
-      if (budget.nextUpdate.isBefore(now) && budget.savings == false) {
-        Logger.info(
-          "Updating budget",
-          data: {
-            "user": user,
-            "budget": budget.name,
-            "oldBalance": budget.balance,
-            "newBalance": budget.balance + budget.budget,
-          },
-        );
-        budget.balance += budget.budget;
-        budget.pushUpdate();
-
-        // Update in Firestore
-        await userRef
-            .collection('categories')
-            .doc(budget.name)
-            .update(budget.toJson());
-      }
-    }
-  }
-
   Future<void> moveMoney(String from, String? to, double amount) async {
     if (user == null || to == null) return;
 

@@ -37,42 +37,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    print("updating budgets didChangeDependencies");
-    updateBudgets();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      print("updating budgets didChangeAppLifecycleState");
-      updateBudgets();
-    }
-  }
-
-  void updateBudgets() {
-    ExpenseProvider provider = Provider.of<ExpenseProvider>(
-      context,
-      listen: false,
-    );
-    provider.updateBudgets();
-  }
-
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
