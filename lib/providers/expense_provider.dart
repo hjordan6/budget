@@ -426,9 +426,8 @@ class ExpenseProvider extends ChangeNotifier {
     batch.delete(
       userRef.collection('unreviewedTransactions').doc(transaction.id),
     );
-    budget.balance -= transaction.price;
     batch.update(userRef.collection('categories').doc(category), {
-      'balance': budget.balance,
+      'balance': FieldValue.increment(-transaction.price),
     });
 
     await batch.commit();
