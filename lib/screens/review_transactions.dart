@@ -54,7 +54,7 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                 ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  initialValue: selectedCategory,
+                  value: selectedCategory,
                   decoration: const InputDecoration(
                     labelText: 'Assign to category',
                     border: OutlineInputBorder(),
