@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
 import 'transactions.dart';
+import 'review_transactions.dart';
 import 'budgets.dart';
 import 'nutrition.dart';
 import 'nutrition_history.dart';
@@ -13,6 +14,8 @@ class DataPage extends StatelessWidget {
   AppBar appBar(AppPage page) {
     if (page == AppPage.list) {
       return AppBar(title: Text("Transactions"));
+    } else if (page == AppPage.reviewTransactions) {
+      return AppBar(title: Text("Review Transactions"));
     } else if (page == AppPage.categories) {
       return AppBar(title: Text("Budget Categories"));
     } else if (page == AppPage.nutrition) {
@@ -31,6 +34,7 @@ class DataPage extends StatelessWidget {
 
     final pageMap = {
       AppPage.list: const ExpenseListPage(),
+      AppPage.reviewTransactions: const ReviewTransactionsPage(),
       AppPage.categories: const CategorySummaryPage(),
       AppPage.account: AccountPage(),
       AppPage.nutrition: const NutritionTrackerPage(),
@@ -57,6 +61,15 @@ class DataPage extends StatelessWidget {
               selected: currentPage == AppPage.list,
               onTap: () {
                 provider.toggleView(AppPage.list);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.playlist_add_check),
+              title: const Text('Review Transactions'),
+              selected: currentPage == AppPage.reviewTransactions,
+              onTap: () {
+                provider.toggleView(AppPage.reviewTransactions);
                 Navigator.pop(context);
               },
             ),

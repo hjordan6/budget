@@ -8,7 +8,15 @@ import '../models/nutrition.dart';
 import '../services/auth_service.dart';
 import 'dart:async';
 
-enum AppPage { list, categories, account, saving, nutrition, nutritionHistory }
+enum AppPage {
+  list,
+  reviewTransactions,
+  categories,
+  account,
+  saving,
+  nutrition,
+  nutritionHistory,
+}
 
 class ExpenseProvider extends ChangeNotifier {
   ExpenseProvider() {
@@ -31,16 +39,19 @@ class ExpenseProvider extends ChangeNotifier {
   String? get authEmail => AuthService().currentUser?.email;
 
   List<Expense> _expenses = [];
+  List<Expense> _unreviewedTransactions = [];
   Map<String, BudgetCategory> _budgets = {};
   List<NutritionEntry> _nutrition = [];
 
   AppPage _currentView = AppPage.categories;
 
   StreamSubscription<QuerySnapshot>? _expensesSubscription;
+  StreamSubscription<QuerySnapshot>? _unreviewedTransactionsSubscription;
   StreamSubscription<QuerySnapshot>? _categoriesSubscription;
   StreamSubscription<QuerySnapshot>? _nutritionSubscription;
 
   List<Expense> get expenses => _expenses;
+  List<Expense> get unreviewedTransactions => _unreviewedTransactions;
   Map<String, BudgetCategory> get budgets => _budgets;
   List<NutritionEntry> get nutrition => _nutrition;
   AppPage get currentView => _currentView;
@@ -55,6 +66,7 @@ class ExpenseProvider extends ChangeNotifier {
       _stopListening();
       user = null;
       _expenses = [];
+      _unreviewedTransactions = [];
       _budgets = {};
       _nutrition = [];
       _needsAccountSetup = false;
@@ -117,6 +129,27 @@ class ExpenseProvider extends ChangeNotifier {
           },
         );
 
+    // Listen to unreviewed transactions collection
+    _unreviewedTransactionsSubscription = userRef
+        .collection('unreviewedTransactions')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _unreviewedTransactions = snapshot.docs.map((doc) {
+              return Expense.fromJson(doc.data(), doc.id);
+            }).toList();
+            notifyListeners();
+          },
+          onError: (error) {
+            debugPrint('Error listening to unreviewed transactions: $error');
+            Logger.error(
+              "Error listening to unreviewed transactions",
+              data: {"user": user, "error": error.toString()},
+            );
+          },
+        );
+
     // Listen to categories collection
     _categoriesSubscription = userRef
         .collection('categories')
@@ -163,9 +196,11 @@ class ExpenseProvider extends ChangeNotifier {
 
   void _stopListening() {
     _expensesSubscription?.cancel();
+    _unreviewedTransactionsSubscription?.cancel();
     _categoriesSubscription?.cancel();
     _nutritionSubscription?.cancel();
     _expensesSubscription = null;
+    _unreviewedTransactionsSubscription = null;
     _categoriesSubscription = null;
     _nutritionSubscription = null;
   }
@@ -175,6 +210,7 @@ class ExpenseProvider extends ChangeNotifier {
       _stopListening();
       user = newUser;
       _expenses = [];
+      _unreviewedTransactions = [];
       _budgets = {};
       _nutrition = [];
       if (user != null) {
@@ -349,6 +385,52 @@ class ExpenseProvider extends ChangeNotifier {
       );
       rethrow;
     }
+  }
+
+  Future<void> dismissUnreviewedTransaction(Expense transaction) async {
+    if (user == null) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    await userRef
+        .collection('unreviewedTransactions')
+        .doc(transaction.id)
+        .delete();
+  }
+
+  Future<void> approveUnreviewedTransaction(
+    Expense transaction,
+    String category,
+  ) async {
+    if (user == null || category.trim().isEmpty) return;
+
+    final userRef = _firestore.collection('users').doc(user);
+    final approvedExpense = Expense(
+      id: transaction.id,
+      name: transaction.name,
+      category: category,
+      price: transaction.price,
+      date: transaction.date,
+      notes: transaction.notes,
+    );
+
+    final batch = _firestore.batch();
+    batch.set(
+      userRef.collection('expenses').doc(approvedExpense.id),
+      approvedExpense.toJson(),
+    );
+    batch.delete(
+      userRef.collection('unreviewedTransactions').doc(transaction.id),
+    );
+
+    final budget = _budgets[category];
+    if (budget != null) {
+      budget.balance -= transaction.price;
+      batch.update(userRef.collection('categories').doc(category), {
+        'balance': budget.balance,
+      });
+    }
+
+    await batch.commit();
   }
 
   /// Updates a budget category in Firestore

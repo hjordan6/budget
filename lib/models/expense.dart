@@ -34,7 +34,7 @@ class Expense {
     return Expense(
       id: json['id'] ?? docId,
       name: json['name'] as String,
-      category: json['category'] as String,
+      category: (json['category'] as String?) ?? '',
       price: (json['price'] as num).toDouble(),
       date: (json['date'] as Timestamp).toDate(),
       notes: json['notes'] ?? '',
