@@ -69,9 +69,7 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                   onChanged: (value) {
                     setState(() {
                       if (value == null) {
-                        setState(() {
-                          _selectedCategoryByTransactionId.remove(tx.id);
-                        });
+                        _selectedCategoryByTransactionId.remove(tx.id);
                       } else {
                         _selectedCategoryByTransactionId[tx.id] = value;
                       }
@@ -126,9 +124,7 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                                 );
                                 return;
                               }
-                              setState(() {
-                                _selectedCategoryByTransactionId.remove(tx.id);
-                              });
+                              _selectedCategoryByTransactionId.remove(tx.id);
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
