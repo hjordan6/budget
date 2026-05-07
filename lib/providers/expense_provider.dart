@@ -401,7 +401,10 @@ class ExpenseProvider extends ChangeNotifier {
     Expense transaction,
     String category,
   ) async {
-    if (user == null || category.trim().isEmpty) return;
+    if (user == null) return;
+    if (category.trim().isEmpty) {
+      throw ArgumentError('Category is required');
+    }
 
     final budget = _budgets[category];
     if (budget == null) {
