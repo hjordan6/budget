@@ -81,9 +81,20 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                   children: [
                     TextButton.icon(
                       onPressed: () async {
-                        await context
-                            .read<ExpenseProvider>()
-                            .dismissUnreviewedTransaction(tx);
+                        try {
+                          await context
+                              .read<ExpenseProvider>()
+                              .dismissUnreviewedTransaction(tx);
+                        } catch (_) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to dismiss transaction'),
+                            ),
+                          );
+                          return;
+                        }
+                        _selectedCategoryByTransactionId.remove(tx.id);
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Transaction dismissed')),
@@ -97,12 +108,23 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                       onPressed: selectedCategory == null
                           ? null
                           : () async {
-                              await context
-                                  .read<ExpenseProvider>()
-                                  .approveUnreviewedTransaction(
-                                    tx,
-                                    selectedCategory,
-                                  );
+                              try {
+                                await context
+                                    .read<ExpenseProvider>()
+                                    .approveUnreviewedTransaction(
+                                      tx,
+                                      selectedCategory,
+                                    );
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Failed to add transaction'),
+                                  ),
+                                );
+                                return;
+                              }
+                              _selectedCategoryByTransactionId.remove(tx.id);
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(

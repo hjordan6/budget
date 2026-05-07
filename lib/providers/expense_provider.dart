@@ -403,6 +403,11 @@ class ExpenseProvider extends ChangeNotifier {
   ) async {
     if (user == null || category.trim().isEmpty) return;
 
+    final budget = _budgets[category];
+    if (budget == null) {
+      throw StateError('Category "$category" does not exist');
+    }
+
     final userRef = _firestore.collection('users').doc(user);
     final approvedExpense = Expense(
       id: transaction.id,
@@ -421,14 +426,10 @@ class ExpenseProvider extends ChangeNotifier {
     batch.delete(
       userRef.collection('unreviewedTransactions').doc(transaction.id),
     );
-
-    final budget = _budgets[category];
-    if (budget != null) {
-      budget.balance -= transaction.price;
-      batch.update(userRef.collection('categories').doc(category), {
-        'balance': budget.balance,
-      });
-    }
+    budget.balance -= transaction.price;
+    batch.update(userRef.collection('categories').doc(category), {
+      'balance': budget.balance,
+    });
 
     await batch.commit();
   }
