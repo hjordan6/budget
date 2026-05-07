@@ -94,7 +94,10 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                           );
                           return;
                         }
-                        _selectedCategoryByTransactionId.remove(tx.id);
+                        if (!mounted) return;
+                        setState(() {
+                          _selectedCategoryByTransactionId.remove(tx.id);
+                        });
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Transaction dismissed')),
@@ -124,7 +127,10 @@ class _ReviewTransactionsPageState extends State<ReviewTransactionsPage> {
                                 );
                                 return;
                               }
-                              _selectedCategoryByTransactionId.remove(tx.id);
+                              if (!mounted) return;
+                              setState(() {
+                                _selectedCategoryByTransactionId.remove(tx.id);
+                              });
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
